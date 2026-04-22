@@ -5,10 +5,10 @@ Maintainer: Aaryan <aryanxp0909@gmail.com>
 Depends: default-jre-headless (>= 2:1.17)
 Recommends: redis-server
 Filename: ./distbuild-1.1.3.deb
-Size: 19072280
-MD5sum: c692272c398f7a943366e6f38a6d44b1
-SHA1: cf2a72e87eecd68ebbe0b17e7c437dc91b36c0f6
-SHA256: f321a9c2b778850d9c85fb64a94c0871a662c7f8d68fd15256ffdae6abc69300
+Size: 19072344
+MD5sum: 479df75a54d193a17ec2de31a1824bbf
+SHA1: d9649848ba07b9e45fa178508573e86d6573b89a
+SHA256: 3513ea76b0e6a76e6d2759bf4b56b83051674bed0aba7a5f22819876db8af6f3
 Section: devel
 Priority: optional
 Homepage: https://github.com/Aaryan1101/distbuild
