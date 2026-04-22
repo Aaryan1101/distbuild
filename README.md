@@ -18,6 +18,13 @@ irm https://raw.githubusercontent.com/Aaryan1101/distbuild/main/installer/instal
 ```
 
 ### Scoop Installation (Windows)
+
+**First, install Scoop (if not already installed):**
+```powershell
+irm get.scoop.sh | iex
+```
+
+**Then install distbuild:**
 ```powershell
 scoop bucket add distbuild https://github.com/Aaryan1101/scoop-distbuild
 scoop install distbuild
