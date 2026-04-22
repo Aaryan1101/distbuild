@@ -1,415 +1,0 @@
-Distributed Build System for Java
-Complete Project Guide — Zero to One
-
-Parallel Gradle Compilation Distributed Across Your Team's Machines
-
-
-
-Target: Small teams (~10 devs)  |  Stack: Java / Kotlin + gRPC + Redis  |  Timeline: 8 weeks
-
-
-Table of Contents
-Table of Contents	2
-1. Project Overview	4
-1.1 What You're Building	4
-1.2 Expected Speedup	4
-2. System Architecture	5
-2.1 Data Flow (Step by Step)	5
-2.2 Component Interaction	5
-3. Technology Stack	6
-4. Complete File Structure	7
-4.1 Top-Level Layout	7
-4.2 proto/ — Shared Protocol	7
-4.3 coordinator/ — Master Node	7
-4.4 worker/ — Worker Agent	8
-4.5 cache/ — Build Cache	9
-4.6 dag/ — Dependency Graph Engine	10
-4.7 gradle-plugin/ — Gradle Integration	11
-4.8 common/ — Shared Utilities	11
-4.9 integration-tests/ — End-to-End Tests	12
-5. Development Roadmap	13
-Phase 1 — Local Parallel Builds (Week 1–2)	13
-Phase 2 — Build Cache (Week 3–4)	13
-Phase 3 — Worker Distribution over gRPC (Week 5–7)	14
-Phase 4 — Gradle Plugin + Polish (Week 8)	14
-6. Step-by-Step Setup Guide	16
-6.1 Prerequisites	16
-6.2 Bootstrap the Project	16
-6.3 Key Dependency Versions (gradle.properties)	16
-6.4 Starting Redis Locally	16
-6.5 Starting the Coordinator	17
-6.6 Starting a Worker (on any machine)	17
-6.7 Applying the Plugin to Your Project	17
-7. Hard Problems and How to Solve Them	19
-7.1 Classpath Correctness	19
-7.2 Annotation Processors	19
-7.3 Incremental Compilation State	19
-7.4 Worker Discovery on a LAN	19
-7.5 Security	19
-8. Testing Strategy	21
-9. Common Pitfalls to Avoid	22
-10. Milestone Checklist	23
-Phase 1 Complete When:	23
-Phase 2 Complete When:	23
-Phase 3 Complete When:	23
-Phase 4 Complete When:	23
-
-
-
-1. Project Overview
-
-
-This guide walks you through building a distributed build system for Java — conceptually similar to distcc for C/C++ — that replaces your slow local Gradle builds by spreading compilation tasks across multiple machines on your network.
-
-When you run ./gradlew build, instead of your laptop compiling every module sequentially, a coordinator node (your laptop) parses the project dependency graph, splits independent modules into parallel tasks, dispatches them to worker nodes (teammates' machines, CI servers, or spare VMs), and assembles the final JARs once results are returned.
-
-1.1 What You're Building
-ComponentWhat it DoesCoordinator (Master)Runs on your laptop. Parses Gradle files, builds the DAG, schedules tasks, collects results.Worker AgentRuns on any spare machine. Waits for tasks, compiles Java sources, returns .class files.Build CacheRedis-backed. Hashes inputs — if unchanged, skips recompilation entirely.gRPC ProtocolFast binary transport between coordinator and workers. Typed, versioned, language-agnostic.Gradle PluginHooks into ./gradlew build so devs don't need to change their workflow.DAG SchedulerTopological sort + parallel task queue. Decides what runs now vs. what must wait.
-1.2 Expected Speedup
-ScenarioExpected ResultClean build, 3 worker nodes3–4x faster compilationIncremental build (nothing changed)Near-instant — served from cacheIncremental build (1 module changed)Only that module recompiles, rest from cache10 independent modules, 5 workersUp to 5x parallelism on compilation phase
-
-
-2. System Architecture
-
-
-The system follows a coordinator-worker pattern with a shared artifact cache. All communication happens over gRPC on your local network. Workers are stateless — they receive everything they need in each task payload.
-
-2.1 Data Flow (Step by Step)
-1. Developer runs ./gradlew build on laptop
-2. Gradle plugin intercepts the build lifecycle
-3. Coordinator calls Gradle Tooling API to extract the project model (all modules + dependencies)
-4. DAG Scheduler performs topological sort — identifies modules with no unresolved dependencies
-5. For each ready module: SHA-256 hash of (source files + classpath JARs + compiler flags) is computed
-6. Cache hit? Return .class files immediately — no compilation
-7. Cache miss? Dispatch CompileTask to an available worker via gRPC
-8. Worker receives task, runs javac or ECJ, returns compiled output
-9. Coordinator stores result in cache, marks module complete
-10. Newly unblocked modules are scheduled. Repeat until all modules done.
-11. Coordinator assembles final JAR on your laptop. Build complete.
-
-2.2 Component Interaction
-FromTo / ActionGradle PluginCalls Coordinator API with project root pathCoordinatorCalls Gradle Tooling API (in-process) to get project modelCoordinator ? CacheGET hash ? returns compiled artifact or MISSCoordinator ? WorkergRPC CompileTask RPC with sources + classpathWorker ? CoordinatorgRPC CompileResult with .class files (zipped)Coordinator ? CachePUT compiled artifact with input hash as keyCoordinator ? GradleReturns assembled JARs to continue build lifecycle
-
-
-3. Technology Stack
-
-
-ComponentTechnologyWhyPrimary languageJava 17 / KotlinDogfoods your own system; excellent toolingBuild tool (meta)Gradle 8.xYou're building a Gradle plugin — must use GradleRPC / TransportgRPC + Protocol BuffersFast binary, strongly typed, great Java supportBuild cacheRedis 7 (Lettuce client)Fast, supports TTL, easy to self-hostCompilerEclipse ECJ (embedded)Faster than javac, embeddable, full incremental supportDependency graphGradle Tooling APIAvoids re-parsing build.gradle from scratchWorker discoverymDNS / manual configSimple — workers register their IP:portSerializationProtobuf (via gRPC)Efficient binary, works across JVM versionsTestingJUnit 5 + TestcontainersUnit + integration tests; Redis in Docker for testsCI (for the tool itself)GitHub ActionsBuild and test your build system automatically
-
-
-4. Complete File Structure
-
-
-The project is a Gradle multi-module project. Each sub-module has a single, well-defined responsibility. Here is the complete layout with explanations:
-
-4.1 Top-Level Layout
-distributed-java-build/
-??? build.gradle.kts              # Root build config — applies plugins to all subprojects
-??? settings.gradle.kts           # Declares all submodules
-??? gradle.properties             # Shared versions (Java, gRPC, Redis, etc.)
-??? gradlew / gradlew.bat         # Gradle wrapper
-??? proto/                        # Protobuf definitions (shared schema)
-??? coordinator/                  # Master node — your laptop process
-??? worker/                       # Worker agent — runs on other machines
-??? cache/                        # Build cache client + server logic
-??? dag/                          # Dependency graph engine
-??? gradle-plugin/                # ./gradlew integration
-??? common/                       # Shared models, utils, logging
-??? integration-tests/            # End-to-end tests across all components
-
-4.2 proto/ — Shared Protocol
-Protobuf files define the contract between coordinator and workers. Generate Java classes from these.
-
-proto/
-??? src/main/proto/
-    ??? build_service.proto        # Main gRPC service definition
-    ??? compile_task.proto         # CompileTask message (sources, classpath, options)
-    ??? compile_result.proto       # CompileResult message (.class files, errors, timing)
-
-FilePurposebuild_service.protoDefines the BuildService gRPC service with SubmitTask, GetTaskResult, and Heartbeat RPCscompile_task.protoCompileTask message: list of source files (bytes), list of JAR hashes, compiler flags, module name, input hashcompile_result.protoCompileResult message: compiled .class files (zipped bytes), stdout/stderr, success flag, duration_ms
-4.3 coordinator/ — Master Node
-coordinator/
-??? build.gradle.kts
-??? src/main/java/com/distbuild/coordinator/
-    ??? CoordinatorMain.java          # Entry point — starts gRPC server, REST API
-    ??? BuildCoordinator.java         # Orchestrates full build: DAG ? schedule ? collect
-    ??? TaskScheduler.java            # Pulls ready tasks from DAG, dispatches to workers
-    ??? WorkerRegistry.java           # Tracks available workers (IP, port, load, health)
-    ??? WorkerClient.java             # gRPC stub for calling worker nodes
-    ??? GradleProjectParser.java      # Calls Gradle Tooling API, extracts module graph
-    ??? InputHasher.java              # SHA-256 of sources + classpath + flags
-    ??? ResultCollector.java          # Receives worker results, writes to output dir
-    ??? BuildSession.java             # Per-build state: task queue, results, status
-
-FileWhat it accomplishesCoordinatorMain.javaStarts two servers: a gRPC server (port 9090) for worker callbacks, and an HTTP server (port 8080) for the Gradle plugin to call. Loads config (worker addresses, cache URL).BuildCoordinator.javaThe main orchestrator. Given a project root, calls GradleProjectParser to get the module graph, hands it to the DAG engine, then enters the scheduling loop: poll for ready tasks, dispatch, await results, unlock dependents.TaskScheduler.javaMaintains a priority queue of ready tasks. Assigns tasks to workers using a simple least-loaded strategy. Handles timeouts — if a worker goes silent, re-queues the task to another worker.WorkerRegistry.javaKeeps a live map of worker nodes. Workers heartbeat every 5 seconds. Registry marks workers as unhealthy after 3 missed heartbeats. TaskScheduler only pulls from healthy workers.WorkerClient.javaWraps the gRPC stub for BuildService. Handles channel lifecycle, deadlines, and retries with exponential backoff (3 attempts max).GradleProjectParser.javaUses Gradle Tooling API (GradleConnector) to extract a rich project model without running a full build. Returns a list of modules with their source dirs, compile classpath, and dependency edges.InputHasher.javaComputes a deterministic SHA-256 hash for each compile task. Input: sorted list of source file SHA-256s + sorted list of classpath JAR hashes + compiler flags string. Same inputs ? same hash ? cache hit.ResultCollector.javaReceives CompileResult from workers. Extracts .class files to the module's build/classes directory. Stores the result in cache. Signals BuildSession that this module is complete.BuildSession.javaImmutable-ish state for one build invocation. Tracks: total modules, completed modules, failed modules, start time, per-module timings. Used for progress reporting and final summary.
-4.4 worker/ — Worker Agent
-worker/
-??? build.gradle.kts
-??? src/main/java/com/distbuild/worker/
-    ??? WorkerMain.java               # Entry point — registers with coordinator, starts gRPC
-    ??? WorkerService.java            # gRPC service impl — receives tasks, returns results
-    ??? JavaCompiler.java             # Wraps ECJ compiler — compiles source files in-memory
-    ??? ClasspathResolver.java        # Resolves JAR hashes to actual files from local cache
-    ??? SandboxManager.java           # Creates/cleans temp dirs per task for isolation
-    ??? WorkerConfig.java             # Config: coordinator address, cache URL, thread pool size
-
-FileWhat it accomplishesWorkerMain.javaStarts the worker gRPC server on a configurable port. Sends a RegisterWorker RPC to the coordinator at startup. Starts the heartbeat scheduler (pings coordinator every 5s). Handles SIGTERM gracefully — drains in-flight tasks before shutting down.WorkerService.javaImplements the BuildService gRPC interface. Receives SubmitTask RPCs, checks local JAR cache, delegates to JavaCompiler, serializes results, returns CompileResult. Uses a thread pool (default: CPU cores - 1) to handle concurrent tasks.JavaCompiler.javaWraps Eclipse ECJ in embedded mode (no subprocess). Accepts source file bytes + classpath JARs, runs compilation in-memory, captures diagnostics (errors, warnings with file/line), returns .class file bytes. Much faster than forking javac.ClasspathResolver.javaWorkers need the actual JAR bytes to compile. InputHasher sent JAR hashes — this class checks local disk cache first, then fetches from the shared Redis cache. Caches JARs locally so the next task that needs the same JAR doesn't re-download.SandboxManager.javaEach task gets a fresh temp directory under /tmp/distbuild/{taskId}/. Source files are written here before compilation. Directory is deleted after task completes (success or failure). Prevents cross-task interference.WorkerConfig.javaReads config from environment variables or a YAML file: coordinator host/port, Redis URL, max concurrent tasks, local JAR cache path, worker ID (defaults to hostname).
-4.5 cache/ — Build Cache
-cache/
-??? build.gradle.kts
-??? src/main/java/com/distbuild/cache/
-    ??? BuildCache.java               # Interface: get(hash), put(hash, artifact), invalidate
-    ??? RedisBuildCache.java          # Redis implementation using Lettuce async client
-    ??? LocalDiskCache.java           # Fallback: file-system cache for single-machine mode
-    ??? CacheKey.java                 # Value object wrapping the SHA-256 input hash
-    ??? CacheEntry.java               # Cached artifact: .class bytes + metadata (timestamp, size)
-
-FileWhat it accomplishesBuildCache.javaSimple interface with three methods: get(CacheKey) ? Optional<CacheEntry>, put(CacheKey, CacheEntry), invalidate(CacheKey). Both coordinator and workers depend on this interface — swap Redis for anything else without touching other code.RedisBuildCache.javaLettuce-based async Redis client. Serializes CacheEntry to MessagePack (compact binary). Uses Redis TTL (default 7 days). Handles connection pooling and reconnection. Key format: distbuild:v1:{sha256hex}.LocalDiskCache.javaFile-system implementation for teams without Redis. Stores entries as files under ~/.distbuild/cache/{first2hex}/{sha256hex}. Implements LRU eviction when cache exceeds configured size (default 10 GB). Good for getting started without infrastructure.CacheKey.javaImmutable value object. Wraps the 64-char hex SHA-256 string. Has equals/hashCode. Validates hex format on construction. Used as the canonical identifier for any compile task's output.CacheEntry.javaContains: byte[] classFiles (zipped), String moduleId, long createdAt, long sizeBytes, Map<String,String> metadata (compiler version, Java version). Metadata enables cache invalidation when compiler is upgraded.
-4.6 dag/ — Dependency Graph Engine
-dag/
-??? build.gradle.kts
-??? src/main/java/com/distbuild/dag/
-    ??? ModuleGraph.java               # The DAG: nodes = modules, edges = dependencies
-    ??? Module.java                    # Node: id, sourceDirs, classpath, dependsOn
-    ??? TopologicalSorter.java         # Kahn's algorithm — returns layered build order
-    ??? ParallelTaskQueue.java         # Thread-safe queue of currently-runnable modules
-    ??? CycleDetector.java             # Detects circular dependencies, throws with clear message
-
-FileWhat it accomplishesModuleGraph.javaAdjacency list graph of Module nodes. Supports: addModule(), addDependency(), getRoots() (modules with no dependencies), getSuccessors(module) (what becomes available when this module completes). Immutable after construction.Module.javaValue object for one Gradle subproject: moduleId (e.g. :core, :api), list of source directories, list of classpath JAR paths, list of dependency module IDs. Built by GradleProjectParser.TopologicalSorter.javaKahn's algorithm on the DAG. Returns not a flat list but a list of layers — layer 0 is all roots (can start immediately), layer 1 becomes available once layer 0 completes, etc. Layers let you visualize max parallelism per phase.ParallelTaskQueue.javaThread-safe blocking queue. Coordinator polls it for ready tasks. When a module completes, its successors are checked — if all their dependencies are done, they're added to the queue. Central to the scheduling loop.CycleDetector.javaDFS-based cycle detection on the module graph. Runs before any scheduling starts. If a cycle is found, throws CyclicDependencyException listing the full cycle path. Rare in real projects but critical to catch early.
-4.7 gradle-plugin/ — Gradle Integration
-gradle-plugin/
-??? build.gradle.kts
-??? src/main/
-    ??? java/com/distbuild/plugin/
-    ?   ??? DistBuildPlugin.java          # Plugin entry point — registers with Gradle lifecycle
-    ?   ??? DistBuildTask.java            # Custom Gradle task that delegates to coordinator
-    ?   ??? DistBuildExtension.java       # DSL: coordinatorUrl, workerTimeout, cacheUrl
-    ?   ??? GradleTaskInterceptor.java    # Intercepts JavaCompile tasks, replaces with distributed ones
-    ??? resources/
-        ??? META-INF/gradle-plugins/
-            ??? com.distbuild.properties  # Plugin ID registration
-
-FileWhat it accomplishesDistBuildPlugin.javaImplements Plugin<Project>. Registers the distbuild extension for DSL config. Hooks into project.afterEvaluate() to intercept JavaCompile tasks. If coordinator is reachable, replaces local compilation with distributed compilation. Falls back to local if coordinator is offline.DistBuildTask.javaCustom Gradle task (extends DefaultTask). Annotated with @TaskAction. Sends an HTTP POST to the coordinator with the project root path. Polls for completion. Writes outputs to expected locations so downstream Gradle tasks find them.DistBuildExtension.javaGradle DSL extension. Adds distBuild { coordinatorUrl = 'http://localhost:8080'; cacheUrl = 'redis://localhost:6379'; workerTimeoutSeconds = 120 } block to build.gradle.GradleTaskInterceptor.javaIterates project.tasks.withType(JavaCompile). For each task, adds a doFirst{} hook that checks if coordinator is available and the module is eligible. Replaces task actions with distributed compilation. Re-enables local compilation for annotation-processor-heavy modules.
-4.8 common/ — Shared Utilities
-common/
-??? build.gradle.kts
-??? src/main/java/com/distbuild/common/
-    ??? Logging.java                  # SLF4J wrapper with structured fields (module, taskId, worker)
-    ??? FileUtils.java                # Zip/unzip .class files; recursive file hash
-    ??? RetryPolicy.java              # Exponential backoff with jitter for gRPC calls
-    ??? Config.java                   # Reads YAML config + env var overrides
-    ??? HealthCheck.java              # HTTP /health endpoint for coordinator and workers
-
-4.9 integration-tests/ — End-to-End Tests
-integration-tests/
-??? build.gradle.kts
-??? src/test/java/com/distbuild/it/
-    ??? FullBuildTest.java            # Spins up coordinator + 2 workers + Redis, runs a build
-    ??? CacheHitTest.java             # Verifies second build uses cache (no worker calls)
-    ??? WorkerFailoverTest.java       # Kills a worker mid-build, verifies task re-queued
-    ??? CyclicDependencyTest.java     # Ensures clear error on circular module deps
-    ??? fixtures/                     # Sample Gradle projects used as test inputs
-
-
-
-5. Development Roadmap
-
-
-The roadmap is structured into 4 phases across 8 weeks. Each phase produces a working, testable artifact — you are never more than one phase away from a working system.
-
-Phase 1 — Local Parallel Builds (Week 1–2)
-Goal: Get parallel multi-module compilation working on your own laptop without any network. Prove the DAG engine is correct before distributing anything.
-
-TaskDeliverableSet up Gradle multi-module project structureAll 7 modules scaffold with build.gradle.kts filesWrite Module + ModuleGraph + TopologicalSorterUnit-tested DAG engine that returns layered build orderWrite CycleDetectorThrows clear exception on circular depsWrite GradleProjectParser using Tooling APIExtracts real module graph from a sample Gradle projectWrite ParallelTaskQueueThread-safe queue, tested with concurrent accessWire up BuildCoordinator for local compilationRuns javac locally but in parallel using the DAG orderWrite basic testsEach DAG class has unit tests; coordinator has an integration test with a 3-module sample project
-Success criterion: A 6-module sample project compiles 2–3x faster than sequential Gradle because independent modules run in parallel threads.
-
-Phase 2 — Build Cache (Week 3–4)
-Goal: Add input hashing and caching. This phase alone delivers the biggest practical speedup for incremental builds.
-
-TaskDeliverableImplement InputHasherSHA-256 of sources + classpath + flags — tested for determinismImplement LocalDiskCacheFile-system cache; LRU eviction; unit testedWire cache into BuildCoordinatorCache check before compilation; store result afterSet up Redis with Docker Composedocker-compose.yml for local RedisImplement RedisBuildCacheLettuce async client; TTL; connection poolingWrite CacheHitTestProves second build skips all compilationAdd cache stats loggingCoordinator logs hit rate, bytes saved per build
-Success criterion: Running the same build twice — second run completes in under 2 seconds with 100% cache hit rate.
-
-Phase 3 — Worker Distribution over gRPC (Week 5–7)
-Goal: Actual distributed compilation across multiple machines. This is the core distributed systems work.
-
-TaskDeliverableWrite Protobuf schemas in proto/CompileTask, CompileResult, BuildService fully definedGenerate Java stubs from protoGradle protobuf plugin generates stubs at build timeImplement WorkerService gRPC serverWorker receives tasks, compiles, returns resultsImplement JavaCompiler with ECJEmbedded Eclipse compiler; captures diagnostics with line numbersImplement WorkerClient in coordinatorgRPC stub with retries and deadline handlingImplement WorkerRegistry + heartbeatsCoordinator tracks worker health; removes dead workersImplement ClasspathResolver on workerResolves JAR hashes; local disk cache + Redis fallbackImplement SandboxManagerIsolated temp dir per task; cleanup on completionTest with 2 workers on localhostBoth workers compile different modules in parallelTest worker failoverKill worker mid-build; verify task re-queued to other workerDeploy worker agent to a second machineWorker runs on a teammate's laptop and joins the pool
-Success criterion: Clean build of a 10-module project using 2 remote workers completes in half the time of local-only parallel build.
-
-Phase 4 — Gradle Plugin + Polish (Week 8)
-Goal: Transparent integration so developers just run ./gradlew build and the distributed system kicks in automatically.
-
-TaskDeliverableImplement DistBuildPlugin + DistBuildExtensionPlugin published to local Maven; apply in 2 lines of build.gradleImplement GradleTaskInterceptorIntercepts JavaCompile tasks; falls back gracefully if coordinator offlineAdd /health endpoints to coordinator and workercurl http://localhost:8080/health returns JSON statusWrite startup scripts (coordinator.sh, worker.sh)One-command startup for each componentWrite README and setup guideNew team member can join the worker pool in under 10 minutesRun full integration test suiteAll tests pass with coordinator + 2 workers + RedisProfile and optimize hot pathsInputHasher and JAR transfer are the usual bottlenecksHandle annotation processorsDetect Lombok/MapStruct; fall back to local compilation for those modules
-Success criterion: Developer applies the plugin, starts coordinator and one worker, and sees distributed builds working transparently with ./gradlew build.
-
-
-
-6. Step-by-Step Setup Guide
-
-
-6.1 Prerequisites
-• Java 17+ (your laptop and all workers)
-• Gradle 8.x (installed via sdkman: sdk install gradle)
-• Docker Desktop (for local Redis during development)
-• Git
-• An IDE with Kotlin support (IntelliJ IDEA recommended)
-
-6.2 Bootstrap the Project
-Run these commands to create the root project structure:
-
-mkdir distributed-java-build && cd distributed-java-build
-git init
-gradle init --type basic --dsl kotlin
-
-Edit settings.gradle.kts to declare all submodules:
-
-rootProject.name = "distributed-java-build"
-include("proto", "common", "dag", "cache", "coordinator", "worker", "gradle-plugin", "integration-tests")
-
-6.3 Key Dependency Versions (gradle.properties)
-grpcVersion=1.62.2
-protobufVersion=3.25.3
-lettuceVersion=6.3.2.RELEASE
-ecjVersion=3.37.0
-gradleToolingVersion=8.7
-junitVersion=5.10.2
-testcontainersVersion=1.19.7
-
-6.4 Starting Redis Locally
-# Create docker-compose.yml in project root:
-version: '3.8'
-services:
-  redis:
-    image: redis:7-alpine
-    ports: ['6379:6379']
-    command: redis-server --maxmemory 2gb --maxmemory-policy allkeys-lru
-
-# Start it:
-docker compose up -d
-
-6.5 Starting the Coordinator
-# Build everything first:
-./gradlew :coordinator:shadowJar
-
-# Run coordinator:
-java -jar coordinator/build/libs/coordinator-all.jar \
-  --grpc-port 9090 \
-  --http-port 8080 \
-  --cache-url redis://localhost:6379
-
-6.6 Starting a Worker (on any machine)
-# On the worker machine, copy the worker JAR and run:
-java -jar worker-all.jar \
-  --coordinator-host 192.168.1.10 \
-  --coordinator-port 9090 \
-  --cache-url redis://192.168.1.10:6379 \
-  --grpc-port 9091 \
-  --threads 4
-
-Replace 192.168.1.10 with your laptop's local IP. All machines must be on the same network.
-
-6.7 Applying the Plugin to Your Project
-// In your project's settings.gradle.kts:
-pluginManagement {
-  repositories { mavenLocal(); gradlePluginPortal() }
-}
-
-// In your project's build.gradle.kts:
-plugins { id("com.distbuild") version "0.1.0" }
-
-distBuild {
-  coordinatorUrl = "http://localhost:8080"
-  cacheUrl = "redis://localhost:6379"
-  workerTimeoutSeconds = 120
-  enabled = true
-}
-
-# Now just build as normal:
-./gradlew build
-
-
-
-7. Hard Problems and How to Solve Them
-
-
-7.1 Classpath Correctness
-Workers must compile with the exact same JARs that a local build would use. Sending JARs over the network per task is wasteful. Solution: content-addressed JAR cache.
-
-12. Coordinator computes SHA-256 of every JAR on the local classpath
-13. CompileTask message sends only the list of hashes — not the JAR bytes
-14. Worker checks its local disk cache for each hash
-15. Missing JARs are fetched from Redis (coordinator uploaded them there at build start)
-16. JARs are stored locally so the next task that needs them skips the download
-
-7.2 Annotation Processors
-Annotation processors (Lombok, MapStruct, Dagger) run at compile time, generate source files, and are often stateful. They are incompatible with distributed compilation in the general case.
-
-Strategy for Phase 1: Detect modules that declare annotation processors in their annotationProcessor configuration. Fall back to local compilation for those modules. Distribute everything else. This handles 80% of real projects correctly.
-
-Strategy for Phase 2 (advanced): Run annotation processing locally first, then distribute the actual compilation of the generated sources. Requires splitting the JavaCompile task into two phases.
-
-7.3 Incremental Compilation State
-Gradle's incremental compiler tracks which .class files depend on which source files. This state lives in build/tmp/compileJava/. Workers don't have this state.
-
-Solution: Include the incremental state directory in the cache key. If the state is missing (cold worker), do a full compile of that module. Full compiles are still fast for individual modules. The coordinator's cache hit means most modules never reach workers anyway.
-
-7.4 Worker Discovery on a LAN
-For a team of 10, manual IP configuration (workers listed in coordinator config) is fine and avoids DNS/mDNS complexity. For more dynamic setups, use mDNS: workers broadcast _distbuild._tcp.local at startup, coordinator listens and auto-discovers them.
-
-7.5 Security
-For an internal team on a trusted LAN, no auth is needed in Phase 1. For later: add mutual TLS to gRPC channels (gRPC has excellent mTLS support). This prevents rogue machines from joining your worker pool.
-
-
-
-8. Testing Strategy
-
-
-Test TypeWhat to TestDAG unit testsTopological sort correctness; cycle detection; empty graph; single module; chain of 10InputHasher unit testsSame inputs ? same hash; different source file ? different hash; different JAR ? different hashCache unit testsLocalDiskCache: put, get, eviction; RedisBuildCache with Testcontainers RedisWorkerService unit testsMock compiler; verify task received ? result returned with correct class filesCoordinator integration testsReal DAG + real cache + mock workers; verify scheduling order; verify cache bypass when worker failsFull integration testsReal coordinator + 2 workers + Redis in Docker; build a 6-module sample project; verify outputs identical to local buildChaos testsKill worker at 50% completion; verify build completes via failover; verify cache not corrupted
-
-
-9. Common Pitfalls to Avoid
-
-
-• Use content-addressed hashes. Workers fetch JARs they don't have from cache. Sending 50 MB of JARs per task over the LAN will be slower than local compilation.Don't send full JAR bytes in CompileTask: 
-
-• BuildSession should be immutable once created. Use ConcurrentHashMap for tracking completion. Race conditions in the scheduler cause mysterious build failures.Don't share mutable state between tasks: 
-
-• If the coordinator is unreachable, the Gradle plugin MUST fall back to local compilation silently. Developers will not tolerate a build tool that breaks their build.Don't skip the fallback path: 
-
-• All workers must run the same JDK version as your coordinator. Compiling with Java 21 on the worker and running on Java 17 locally causes cryptic errors. Embed the target Java version in the cache key.Don't forget Java version alignment: 
-
-• Only store CompileResult in cache if success == true. A cached failure would mean a fixed source file still fails on next build.Don't cache failed compilations: 
-
-• Paths differ across machines (/Users/alice vs /Users/bob). Hash only file contents, not paths. This is why InputHasher reads file bytes, not file names.Don't use file paths in cache keys: 
-
-
-
-10. Milestone Checklist
-
-
-Phase 1 Complete When:
-• ModuleGraph, TopologicalSorter, CycleDetector all have passing unit tests
-• GradleProjectParser extracts correct module graph from a real 4-module Gradle project
-• BuildCoordinator compiles 6 independent modules in parallel (verified by timing logs)
-• Parallel build is measurably faster than sequential
-
-Phase 2 Complete When:
-• Second build of unchanged project returns from cache in under 3 seconds
-• Cache hit rate is logged and shows 100% on unchanged build
-• Redis cache works (verified with redis-cli monitor showing keys being set)
-• CacheHitTest passes
-
-Phase 3 Complete When:
-• Worker registers with coordinator and appears in worker list
-• CompileTask dispatched to worker, result received and written to output dir
-• Build output is byte-for-byte identical to local build (verified with checksums)
-• WorkerFailoverTest passes — task re-queued when worker dies
-• Two machines on same LAN both contribute to a build
-
-Phase 4 Complete When:
-• ./gradlew build on a real project uses distributed compilation transparently
-• Plugin falls back to local compilation when coordinator is offline
-• New team member can set up worker in under 10 minutes using startup script
-• All integration tests pass
-
-
-Distributed Java Build System — Project Guide  |  Version 1.0

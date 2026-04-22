@@ -1,438 +1,0 @@
-distbuild
-CLI Reference & Integration Guide
-
-Distributed Java Build System — Command Line Tool
-
-
-Windows + Linux  |  debug & release builds  |  Picocli-powered
-
-
-1. Overview — What You're Building
-
-
-You will build distbuild as a proper system-level CLI tool — just like git, mvn, or gradle. Once installed, any developer on Windows or Linux runs it from any directory in their terminal without knowing it's a JAR underneath.
-
-The CLI is powered by Picocli — a Java library specifically designed for building professional command-line tools. It gives you: automatic --help generation, subcommand routing, typed flag parsing, shell autocomplete scripts, and coloured terminal output with zero boilerplate.
-
-What it feels likeWhat it actually isdistbuild build --type releaseSends HTTP request to coordinator, polls for resultdistbuild worker startLaunches worker agent JAR as background processdistbuild statusCalls coordinator /status endpoint, pretty-prints JSONdistbuild cache clearCalls coordinator /cache/clear endpoint
-
-
-2. Complete Command Reference
-
-
-Every command follows this structure:
-
-$ distbuild <command> [subcommand] [flags]
-
-2.1  build  —  Trigger a distributed build
-
-distbuild build [flags]Sends the current project to the coordinator for distributed compilation. Streams live progress to terminal.$ distbuild build --type release --workers 4 --no-cache
-FlagShortDefaultDescription--type <debug|release>-tdebugBuild variant to compile. Affects compiler flags (-g for debug, -O for release) and output directory.--workers <n>-wautoMax number of worker nodes to use. 'auto' uses all available healthy workers.--no-cachefalseSkip cache lookup and force full recompilation. Useful when you suspect stale cache.--parallel <n>-p4Max parallel tasks dispatched at once. Tune based on network bandwidth.--timeout <sec>120Seconds to wait for each worker task before retrying on another worker.--output <dir>-obuild/distDirectory to write final JARs and artifacts into.--module <name>-mallBuild only a specific module (e.g. --module :core). Others served from cache.--verbose-vfalsePrint per-task logs: which worker handled it, how long it took, cache hit/miss.--dry-runfalseParse DAG and print the build plan without actually compiling anything.
-Build type differences
-
-BehaviourdebugreleaseCompiler flags-g (full debug symbols)-O (optimise), no -gOutput directorybuild/debug/build/release/Cache key suffix...#debug...#releaseAssertion checkingEnabled (-ea)DisabledLog level defaultDEBUGINFOTypical useDay-to-day developmentStaging, QA, production packaging
-Examples
-# Standard debug build (default)
-$ distbuild build
- 
-# Release build using all available workers
-$ distbuild build --type release
- 
-# Release build, skip cache, only 2 workers, verbose logs
-$ distbuild build --type release --no-cache --workers 2 --verbose
- 
-# Build only the :api module in debug mode
-$ distbuild build --module :api --type debug
- 
-# See what would be built without actually building
-$ distbuild build --dry-run --type release
-
-
-
-2.2  worker  —  Manage worker agents
-
-The worker subcommand manages the worker agent on the current machine — start it, stop it, check its status, and see what it's currently compiling.
-
-distbuild worker start [flags]Start the worker agent on this machine and register it with the coordinator.$ distbuild worker start --coordinator 192.168.1.10:9090 --threads 4
-FlagShortDefaultDescription--coordinator <host:port>-clocalhost:9090Coordinator gRPC address to register with.--port <n>9091Port this worker's gRPC server will listen on.--threads <n>-tCPU-1Number of compile tasks to handle concurrently.--cache-url <url>redis://localhost:6379Shared Redis cache URL.--daemonize-dfalseRun in background (detached from terminal).--log-file <path>~/.distbuild/worker.logWrite logs here when running as daemon.
-distbuild worker stopGracefully drain in-flight tasks and shut down the worker agent.$ distbuild worker stop
-distbuild worker statusShow whether the worker is running, how many tasks it has completed, and current load.$ distbuild worker status
-distbuild worker logs [--follow]Print recent worker logs. --follow (-f) streams live like tail -f.$ distbuild worker logs --follow
-distbuild worker listAsk the coordinator for the list of all registered workers and their health.$ distbuild worker list
-Examples
-# Start worker, connect to coordinator on another machine, run as daemon
-$ distbuild worker start --coordinator 192.168.1.10:9090 --daemonize
- 
-# Start with 6 threads (for an 8-core machine)
-$ distbuild worker start --threads 6
- 
-# Check if your worker is contributing
-$ distbuild worker status
- 
-# See what the worker is compiling right now
-$ distbuild worker logs --follow
- 
-# See all workers registered with the coordinator
-$ distbuild worker list
-
-
-
-2.3  coordinator  —  Manage the coordinator
-
-distbuild coordinator start [flags]Start the coordinator process on this machine.$ distbuild coordinator start --http-port 8080 --grpc-port 9090
-FlagDefaultDescription--http-port <n>8080HTTP port for the Gradle plugin to call.--grpc-port <n>9090gRPC port for worker registration and task results.--cache-url <url>redis://localhost:6379Shared Redis cache URL.--max-workers <n>20Maximum number of worker nodes allowed.--daemonize / -dfalseRun in background.--log-file <path>~/.distbuild/coordinator.logLog file path when running as daemon.
-distbuild coordinator stopGracefully stop the coordinator (drains all in-flight builds first).$ distbuild coordinator stop
-distbuild coordinator statusShow coordinator uptime, active builds, registered workers, and cache hit rate.$ distbuild coordinator status
-Example output of  distbuild coordinator status
-  Coordinator   running (uptime: 3h 42m)
-  HTTP          localhost:8080
-  gRPC          localhost:9090
-  Workers       3 healthy / 0 unhealthy
-  Active builds 1 (module :core, debug)
-  Cache hits    847 / 912 tasks (92.9%)
-  Redis         connected  redis://localhost:6379
-
-
-
-2.4  cache  —  Inspect and manage the build cache
-
-distbuild cache statusShow cache size, hit rate for last 24h, and Redis connection info.$ distbuild cache status
-distbuild cache clear [--type <debug|release|all>]Evict cached artifacts. Scoped to a build type so you don't nuke both.$ distbuild cache clear --type release
-distbuild cache clear --module <name>Evict only the cached output for a specific module.$ distbuild cache clear --module :core
-distbuild cache statsPer-module cache statistics: hit count, miss count, last hit time, artifact size.$ distbuild cache stats
-Examples
-# See cache health
-$ distbuild cache status
- 
-# Clear only release artifacts (leave debug cache intact)
-$ distbuild cache clear --type release
- 
-# Force :api to recompile next build (clear its cache entry)
-$ distbuild cache clear --module :api
- 
-# Clear everything
-$ distbuild cache clear --type all
-
-
-
-2.5  init  —  Set up a project to use distbuild
-
-distbuild initAdds the Gradle plugin to your project, creates distbuild.yml config, and validates connectivity.$ distbuild init
-Running distbuild init in a Gradle project root does the following automatically:
-
-1. Detects Gradle project and reads settings.gradle.kts
-2. Adds the distbuild plugin to build.gradle.kts
-3. Creates distbuild.yml with sensible defaults
-4. Pings coordinator (if running) and reports connectivity
-5. Prints a summary of discovered modules and build types
-
-2.6  config  —  View and edit configuration
-
-distbuild config listPrint all current configuration values and where they come from (file, env var, default).$ distbuild config list
-distbuild config set <key> <value>Set a config value in ~/.distbuild/config.yml.$ distbuild config set coordinator.host 192.168.1.10
-Config keyDefaultDescriptioncoordinator.hostlocalhostCoordinator hostname or IPcoordinator.httpPort8080HTTP portcoordinator.grpcPort9090gRPC portcache.urlredis://localhost:6379Redis URLbuild.defaultTypedebugDefault build type when --type not specifiedbuild.defaultWorkersautoDefault worker countworker.threadsCPU-1Default threads for this machine as workerworker.localCachePath~/.distbuild/jarsLocal JAR cache directory
-
-
-2.7  Other utility commands
-
-distbuild logs [--follow] [--type <debug|release>]Tail coordinator logs, optionally filtered by build type.$ distbuild logs --follow --type release
-distbuild versionPrint CLI version, coordinator version (if reachable), and Java runtime info.$ distbuild version
-distbuild doctorDiagnose connectivity issues: checks coordinator, Redis, and worker reachability.$ distbuild doctor
-$ distbuild doctor
- 
-  [OK]  Java 17.0.10 detected
-  [OK]  Coordinator reachable at localhost:8080
-  [OK]  Redis reachable at localhost:6379
-  [OK]  3 workers registered and healthy
-  [WARN] Worker alice-pc has not heartbeated in 8s (threshold: 5s)
-  [OK]  Gradle project detected (:core, :api, :service, :common)
-
-
-
-3. CLI Module — File Structure
-
-
-Add a new cli/ module to your existing project. It depends on coordinator and worker modules but adds no new business logic — it only translates terminal commands into HTTP/gRPC calls.
-
-cli/
-??? build.gradle.kts
-??? src/main/java/com/distbuild/cli/
-    ??? Main.java                      # Entry point — Picocli CommandLine root
-    ??? DistBuildCli.java              # Root @Command with version, help, subcommands
-    ??? commands/
-    ?   ??? BuildCommand.java          # distbuild build [flags]
-    ?   ??? WorkerCommand.java         # distbuild worker <subcommand>
-    ?   ??? CoordinatorCommand.java    # distbuild coordinator <subcommand>
-    ?   ??? CacheCommand.java          # distbuild cache <subcommand>
-    ?   ??? InitCommand.java           # distbuild init
-    ?   ??? ConfigCommand.java         # distbuild config <subcommand>
-    ?   ??? LogsCommand.java           # distbuild logs
-    ?   ??? DoctorCommand.java         # distbuild doctor
-    ?   ??? VersionCommand.java        # distbuild version
-    ??? client/
-    ?   ??? CoordinatorHttpClient.java # HTTP calls to coordinator REST API
-    ?   ??? WorkerProcessManager.java  # Start/stop local worker as OS process
-    ??? output/
-    ?   ??? ProgressRenderer.java      # Live progress bar during builds
-    ?   ??? TableRenderer.java         # Renders ASCII tables (worker list, cache stats)
-    ?   ??? AnsiColour.java            # ANSI codes; auto-disabled on Windows without ANSI
-    ??? config/
-        ??? CliConfig.java             # Loads ~/.distbuild/config.yml
-        ??? ConfigValidator.java       # Validates config on startup
-
-FileWhat it accomplishesMain.javaOne-liner: System.exit(new CommandLine(new DistBuildCli()).execute(args)). Picocli handles everything from here.DistBuildCli.java@Command(name="distbuild", subcommands={...}). Declares version, description, and registers all subcommands. Picocli auto-generates --help from annotations.BuildCommand.javaParses all build flags. Calls CoordinatorHttpClient.triggerBuild(). Streams progress via ProgressRenderer. Returns exit code 0 on success, 1 on failure — so CI scripts work correctly.WorkerCommand.java@Command with nested subcommands: StartCommand, StopCommand, StatusCommand, LogsCommand, ListCommand. Each sub-command is its own class.CoordinatorHttpClient.javaThin HTTP client (Java 11 HttpClient — no extra deps). Calls /build, /status, /cache/clear, /workers endpoints on the coordinator. Handles auth headers and timeout.WorkerProcessManager.javaLaunches worker JAR as a child OS process (ProcessBuilder). Writes PID to ~/.distbuild/worker.pid so 'worker stop' can kill it. Manages daemon mode by detaching the process.ProgressRenderer.javaClears and re-draws the terminal line on each progress update. Shows: modules done/total, current module name, worker being used, elapsed time. Degrades gracefully if terminal doesn't support ANSI.CliConfig.javaReads ~/.distbuild/config.yml using Jackson YAML. Merges with environment variables (DISTBUILD_COORDINATOR_HOST, etc.) — env vars win over file.DoctorCommand.javaRuns 6 connectivity checks in sequence. Each check prints [OK] in green or [WARN]/[FAIL] in yellow/red. Gives actionable fix hints on failure (e.g. 'Run: distbuild coordinator start').
-
-
-4. Implementation Guide
-
-
-4.1 Add Picocli dependency
-
-// cli/build.gradle.kts
-dependencies {
-    implementation(project(":coordinator"))
-    implementation(project(":worker"))
-    implementation(project(":common"))
-    implementation("info.picocli:picocli:4.7.5")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.17.0")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
-    annotationProcessor("info.picocli:picocli-codegen:4.7.5")
-}
- 
-// Build a fat JAR so the CLI is a single file
-tasks.withType<Jar> {
-    manifest { attributes["Main-Class"] = "com.distbuild.cli.Main" }
-    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-4.2 Root command skeleton
-
-// DistBuildCli.java
-@Command(
-    name = "distbuild",
-    mixinStandardHelpOptions = true,
-    version = "distbuild 1.0.0",
-    description = "Distributed Java build system",
-    subcommands = {
-        BuildCommand.class,
-        WorkerCommand.class,
-        CoordinatorCommand.class,
-        CacheCommand.class,
-        InitCommand.class,
-        ConfigCommand.class,
-        LogsCommand.class,
-        DoctorCommand.class,
-        VersionCommand.class
-    }
-)
-public class DistBuildCli implements Runnable {
-    public void run() {
-        // No subcommand given — print help
-        new CommandLine(this).usage(System.out);
-    }
-}
-
-4.3 BuildCommand with build type support
-
-// BuildCommand.java
-@Command(name = "build", description = "Trigger a distributed build")
-public class BuildCommand implements Callable<Integer> {
- 
-    @Option(names = {"-t", "--type"}, defaultValue = "debug",
-            description = "Build type: debug or release")
-    private BuildType buildType;
- 
-    @Option(names = {"--no-cache"}, description = "Skip cache lookup")
-    private boolean noCache;
- 
-    @Option(names = {"-w", "--workers"}, defaultValue = "0",
-            description = "Max workers (0 = auto)")
-    private int workers;
- 
-    @Option(names = {"-v", "--verbose"})
-    private boolean verbose;
- 
-    @Option(names = {"--dry-run"})
-    private boolean dryRun;
- 
-    @Override
-    public Integer call() {
-        var config = CliConfig.load();
-        var client = new CoordinatorHttpClient(config);
-        var req = BuildRequest.builder()
-            .buildType(buildType)     // "debug" or "release"
-            .noCache(noCache)
-            .maxWorkers(workers)
-            .dryRun(dryRun)
-            .projectRoot(Paths.get("").toAbsolutePath())
-            .build();
-        return client.triggerBuild(req, new ProgressRenderer(verbose));
-    }
-}
-
-4.4 BuildType enum
-
-// shared in common/ module
-public enum BuildType {
-    DEBUG, RELEASE;
- 
-    public String compilerFlags() {
-        return this == DEBUG ? "-g" : "-O";
-    }
-    public String outputDir() {
-        return "build/" + name().toLowerCase() + "/";
-    }
-    public String cacheKeySuffix() {
-        return "#" + name().toLowerCase();
-    }
-}
-
-
-
-5. Installing distbuild as a System Tool
-
-
-The goal is that any developer types distbuild anywhere in their terminal and it works — no 'java -jar ...' required. You achieve this with a thin launcher script that wraps the JAR.
-
-5.1 Build the CLI fat JAR
-$ ./gradlew :cli:jar
-# Output: cli/build/libs/distbuild.jar
-
-5.2 Linux / macOS Installation
-# 1. Copy the JAR to a permanent location
-$ sudo mkdir -p /opt/distbuild/bin
-$ sudo cp cli/build/libs/distbuild.jar /opt/distbuild/distbuild.jar
- 
-# 2. Create the launcher script
-$ sudo tee /opt/distbuild/bin/distbuild > /dev/null <<'EOF'
-#!/bin/bash
-exec java $DISTBUILD_JVM_OPTS -jar /opt/distbuild/distbuild.jar "$@"
-EOF
-$ sudo chmod +x /opt/distbuild/bin/distbuild
- 
-# 3. Add to PATH (add this line to ~/.bashrc or ~/.zshrc)
-export PATH="/opt/distbuild/bin:$PATH"
- 
-# 4. Reload and verify
-$ source ~/.bashrc
-$ distbuild version
-
-5.3 Windows Installation
-# 1. Create install directory
-> mkdir C:\distbuild\bin
- 
-# 2. Copy the JAR
-> copy cli\build\libs\distbuild.jar C:\distbuild\distbuild.jar
- 
-# 3. Create distbuild.bat launcher
-> echo @echo off > C:\distbuild\bin\distbuild.bat
-> echo java %DISTBUILD_JVM_OPTS% -jar C:\distbuild\distbuild.jar %* >> C:\distbuild\bin\distbuild.bat
- 
-# 4. Add to System PATH via PowerShell (run as Administrator)
-> $old = [Environment]::GetEnvironmentVariable('Path','Machine')
-> [Environment]::SetEnvironmentVariable('Path', $old + ';C:\distbuild\bin', 'Machine')
- 
-# 5. Open a new terminal and verify
-> distbuild version
-
-5.4 Team install script (recommended)
-Commit an install.sh and install.bat to your repo so any new team member can onboard in one command:
-
-# install.sh  (Linux)
-#!/bin/bash
-set -e
-JAR="$(dirname "$0")/cli/build/libs/distbuild.jar"
-./gradlew :cli:jar
-sudo mkdir -p /opt/distbuild/bin
-sudo cp "$JAR" /opt/distbuild/distbuild.jar
-sudo tee /opt/distbuild/bin/distbuild > /dev/null <<'EOF'
-#!/bin/bash
-exec java -jar /opt/distbuild/distbuild.jar "$@"
-EOF
-sudo chmod +x /opt/distbuild/bin/distbuild
-echo "Add to PATH: export PATH=/opt/distbuild/bin:\$PATH"
-echo "Then run: distbuild doctor"
-
-
-
-6. Day-to-Day Workflows
-
-
-6.1 Developer workflow (build consumer)
-# Morning: start the coordinator on your laptop
-$ distbuild coordinator start --daemonize
- 
-# Check teammates' workers are online
-$ distbuild worker list
- 
-# Do your normal debug builds (fast — cached)
-$ distbuild build
- 
-# Before a PR: release build to catch optimisation issues
-$ distbuild build --type release --verbose
- 
-# Something feels wrong — run diagnostics
-$ distbuild doctor
-
-6.2 Contributor workflow (worker provider)
-# Start worker on your machine when you arrive
-$ distbuild worker start --coordinator 192.168.1.10:9090 --daemonize
- 
-# Check it's contributing
-$ distbuild worker status
- 
-# End of day — stop worker
-$ distbuild worker stop
-
-6.3 Release pipeline (CI / CD)
-# In your CI script (GitHub Actions, Jenkins, etc.)
-- name: Distributed release build
-  run: |
-    distbuild coordinator start --daemonize
-    distbuild worker start --daemonize --threads 8
-    distbuild build --type release --no-cache --output artifacts/
-    distbuild coordinator stop
-
-6.4 Debugging a broken build
-# Step 1: check connectivity
-$ distbuild doctor
- 
-# Step 2: try with verbose to see which module is failing
-$ distbuild build --verbose
- 
-# Step 3: clear cache for the failing module and rebuild
-$ distbuild cache clear --module :payments
-$ distbuild build --module :payments --verbose
- 
-# Step 4: force full local build bypassing distribution
-$ distbuild build --no-cache --workers 0
-
-
-
-7. Environment Variables
-
-
-All flags can be set via environment variables — useful for CI environments where you don't want to pass flags on every command.
-
-Environment VariableEquivalent FlagExampleDISTBUILD_COORDINATOR_HOSTcoordinator --host192.168.1.10DISTBUILD_COORDINATOR_HTTP_PORTcoordinator --http-port8080DISTBUILD_COORDINATOR_GRPC_PORTcoordinator --grpc-port9090DISTBUILD_CACHE_URL--cache-urlredis://cache-server:6379DISTBUILD_BUILD_TYPE--typereleaseDISTBUILD_WORKERS--workers4DISTBUILD_NO_CACHE--no-cachetrueDISTBUILD_JVM_OPTS(launcher script)-Xmx512m -Xms128m
-Priority order (highest wins): Command-line flags > Environment variables > distbuild.yml config file > Built-in defaults.
-
-8. Upgrading the CLI
-
-
-When you release a new version of distbuild, team members update with:
-
-# Linux — from the project root
-$ git pull && ./install.sh
- 
-# Windows
-> git pull && .\install.bat
- 
-# Verify new version
-$ distbuild version
-
-The coordinator and CLI versions are checked on every build. If they are mismatched, distbuild will print a warning but still proceed — so rolling upgrades across a team don't break builds mid-day.
-
-
-distbuild CLI Reference  |  Version 1.0  |  Windows + Linux

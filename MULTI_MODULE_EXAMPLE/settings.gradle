@@ -1,5 +1,0 @@
-rootProject.name = 'multi-module-example'
-include 'shared-utils'
-include 'data-access'
-include 'business-logic'
-include 'web-api'

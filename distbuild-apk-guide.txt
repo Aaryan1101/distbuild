@@ -1,496 +1,0 @@
-distbuild
-Android APK + Java JAR
-Mixed Build Guide
-
-How to build Android APKs and Java JARs from the same Gradle project using distbuild
-
-
-debug + release variants  |  auto-signing  |  same Gradle project  |  Windows + Linux
-
-
-1. The Core Challenge
-
-
-Android APKs and Java JARs look similar on the surface — they are both Gradle builds — but they are fundamentally different under the hood. Your distributed build system was designed for plain Java compilation (javac ? .class files). Android adds several layers on top that require special handling.
-
-Plain Java modulesAndroid app modulesCompilerjavac / ECJjavac ? d8 (dex compiler)Output.class files ? JAR.dex files ? APK (zip)Build toolGradle Java pluginAndroid Gradle Plugin (AGP)Can workers compile?Yes — full distributionPartial — Java only; dex runs on coordinatorSigningNot requiredRequired for release APKsLint / resourcesNoYes — aapt2 processes XML + assetsVariantsdebug / release via BuildTypedebug / release via AGP buildTypes
-The strategy is: distribute what you can (Java compilation of Android source files), run everything else locally on the coordinator (dex, resource processing, linking, signing). This gives you a real speedup on the Java compilation phase — typically 60–70% of total build time.
-
-
-
-2. Project Structure — Mixed Modules
-
-
-Your Gradle project will have both android and java modules under the same root. Here is what the full structure looks like:
-
-distributed-java-build/
-??? settings.gradle.kts
-??? build.gradle.kts
-?
-??? # ?? Pure Java modules (fully distributed) ??????????????????
-??? common/              # Shared utilities — compiled by workers
-??? core/                # Business logic — compiled by workers
-??? api/                 # API layer — compiled by workers
-??? coordinator/         # Build coordinator — compiled by workers
-??? worker/              # Worker agent — compiled by workers
-?
-??? # ?? Android modules (Java phase distributed, dex local) ?????
-??? app/                 # Main Android app module
-?   ??? build.gradle.kts # applies com.android.application
-?   ??? src/
-?   ?   ??? main/java/   # Java sources ? distributed compilation
-?   ?   ??? main/res/    # Resources ? processed locally by aapt2
-?   ?   ??? main/AndroidManifest.xml
-?   ??? signing/
-?       ??? keystore.properties  # Signing config (git-ignored)
-?
-??? android-lib/         # Shared Android library module
-?   ??? build.gradle.kts # applies com.android.library
-?
-??? cli/                 # distbuild CLI tool
-
-Your settings.gradle.kts includes all of them together:
-
-// settings.gradle.kts
-rootProject.name = "my-project"
- 
-// Pure Java modules
-include(":common", ":core", ":api")
-include(":coordinator", ":worker", ":cli")
- 
-// Android modules
-include(":app", ":android-lib")
-
-
-
-3. How Android Builds Work Inside distbuild
-
-
-Understanding the Android build pipeline is essential before wiring it into distbuild. An Android build has five distinct phases — distbuild handles phase 2 in a distributed way and runs everything else on the coordinator:
-
-PhaseWhat happensWhere it runsdistbuild role1  Resource processingaapt2 compiles XML layouts, drawables, strings into binary .flat filesCoordinator (local)Not distributed — aapt2 is not Java compilation2  Java compilationjavac compiles your .java source files to .class filesWorkers (distributed)FULLY DISTRIBUTED — this is where the speedup comes from3  Dex compilationd8 converts .class files to Dalvik .dex bytecode for Android runtimeCoordinator (local)Not distributed — d8 needs all .class files together4  APK packagingaapt2 links resources + classes.dex into a raw .apk fileCoordinator (local)Not distributed5  APK signingapksigner signs the APK with your keystoreCoordinator (local)Auto-signing wired in for release builds
-  NOTE  The Android Gradle Plugin (AGP) controls phases 1, 3, 4, and 5 automatically. You only need to hook into phase 2. Do not try to intercept or replace the other phases — AGP manages them.
-
-3.1  How distbuild hooks into AGP
-
-AGP exposes a JavaCompile task for each build variant — for example, compileDebugJavaWithJavac and compileReleaseJavaWithJavac. Your Gradle plugin intercepts these tasks the same way it does for plain Java modules, with one difference: the classpath includes android.jar (the Android SDK stub) instead of the JDK stdlib.
-
-// In DistBuildPlugin.java — hooking into Android JavaCompile tasks
-project.plugins.withId("com.android.application", plugin -> {
-    // AGP creates JavaCompile tasks after evaluation
-    project.afterEvaluate(p -> {
-        p.getTasks().withType(JavaCompile.class, task -> {
-            if (!task.getName().contains("JavaWithJavac")) return;
- 
-            // Extract build variant from task name
-            // 'compileDebugJavaWithJavac'  ? variant = DEBUG
-            // 'compileReleaseJavaWithJavac' ? variant = RELEASE
-            BuildType variant = extractVariant(task.getName());
- 
-            task.doFirst(t -> {
-                if (!coordinatorClient.isReachable()) return; // fallback
-                coordinatorClient.submitAndroidCompileTask(
-                    task.getSource().getFiles(),
-                    task.getClasspath().getFiles(),
-                    variant,
-                    task.getDestinationDirectory().getAsFile().get()
-                );
-                // Cancel local javac — workers compiled it
-                task.setEnabled(false);
-            });
-        });
-    });
-});
-
-
-
-4. Android Module Build Configuration
-
-
-4.1  app/build.gradle.kts — Full example
-
-plugins {
-    id("com.android.application")
-    id("com.distbuild")           // your plugin — hooks into JavaCompile
-}
- 
-android {
-    namespace = "com.example.myapp"
-    compileSdk = 34
- 
-    defaultConfig {
-        applicationId = "com.example.myapp"
-        minSdk = 24
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
-    }
- 
-    // ?? Build variants ??????????????????????????????????????????
-    buildTypes {
-        debug {
-            isDebuggable = true
-            isMinifyEnabled = false
-            applicationIdSuffix = ".debug"   // debug APK has different ID
-            versionNameSuffix = "-debug"
-        }
-        release {
-            isDebuggable = false
-            isMinifyEnabled = true            // enables R8 / ProGuard
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
- 
-            // ?? Auto-signing config ?????????????????????????????
-            // Reads from app/signing/keystore.properties (git-ignored)
-            val keystoreFile = rootProject.file("app/signing/keystore.properties")
-            if (keystoreFile.exists()) {
-                val props = java.util.Properties().apply { load(keystoreFile.inputStream()) }
-                signingConfig = signingConfigs.create("release") {
-                    storeFile     = file(props["storeFile"] as String)
-                    storePassword = props["storePassword"] as String
-                    keyAlias      = props["keyAlias"] as String
-                    keyPassword   = props["keyPassword"] as String
-                }
-            } else {
-                println("WARNING: keystore.properties not found — release APK will be unsigned")
-            }
-        }
-    }
- 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-}
- 
-dependencies {
-    implementation(project(":common"))    // your shared Java module
-    implementation(project(":core"))
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.google.android.material:material:1.12.0")
-}
- 
-// ?? distbuild plugin config for Android ?????????????????????????
-distBuild {
-    coordinatorUrl = "http://localhost:8080"
-    cacheUrl       = "redis://localhost:6379"
-    // Android-specific: only distribute Java compilation
-    // dex, resources, packaging run locally as normal
-    androidMode = AndroidBuildMode.JAVA_ONLY
-}
-
-4.2  app/signing/keystore.properties
-
-  CAUTION  NEVER commit this file to git. Add app/signing/keystore.properties to your .gitignore immediately. If you commit your keystore password, rotate your keystore.
-
-# app/signing/keystore.properties  ? git-ignored
-storeFile=../signing/my-release-key.jks
-storePassword=your_store_password_here
-keyAlias=my-key-alias
-keyPassword=your_key_password_here
-
-# .gitignore — add these lines
-app/signing/keystore.properties
-*.jks
-*.keystore
-
-  TIP  For CI/CD, store these as GitHub Actions Secrets and write the file during the pipeline before running distbuild build --type release.
-
-
-
-5. Generating Your Signing Keystore
-
-
-You need a keystore file to sign release APKs. Generate it once and store it securely. The same keystore must be used for every future release of your app — if you lose it, you cannot update your app on the Play Store.
-
-5.1  Generate with keytool (built into JDK)
-
-# Run this ONCE. Store the output .jks file somewhere safe.
-$ keytool -genkey -v \
-  -keystore app/signing/my-release-key.jks \
-  -keyalg RSA \
-  -keysize 2048 \
-  -validity 10000 \
-  -alias my-key-alias
- 
-# keytool will prompt you for:
-#   Keystore password  (remember this — you need it every build)
-#   First and last name
-#   Organisation unit, organisation, city, state, country
-#   Key password (can be same as keystore password)
-
-FieldWhat to enterKeystore passwordStrong password — store in a password manager-validity 1000010000 days (~27 years). Google requires > 25 years for Play Store.-keyalg RSAUse RSA. Do not use DSA.-keysize 2048Minimum for Play Store. 4096 is also fine.AliasA label for this key inside the keystore. Can be anything.
-5.2  Verify the keystore was created correctly
-
-$ keytool -list -v -keystore app/signing/my-release-key.jks
-# Should show your key with 'RSA' algorithm and validity dates
-
-
-
-6. CLI Commands for APK Builds
-
-
-The distbuild CLI handles Android APK builds through the same build command, with Android-aware flags added on top. The tool detects that the target module is an Android module and automatically adjusts its behaviour.
-
-6.1  Build commands
-
-distbuild build --type debugBuild a debug APK. Java compilation is distributed; dex + packaging run locally. Output: app/build/outputs/apk/debug/app-debug.apk$ distbuild build --type debug
-distbuild build --type releaseBuild a signed release APK. Java compilation distributed, then R8/dex/sign run locally. Requires keystore.properties to be present.$ distbuild build --type release
-distbuild build --type release --module :appBuild only the Android app module in release mode. Java deps (:common, :core) served from cache.$ distbuild build --type release --module :app
-distbuild build --type debug --apk-output <dir>Build debug APK and copy the output to a specific directory (useful for CI artifact collection).$ distbuild build --type debug --apk-output ./artifacts/
-6.2  New Android-specific flags
-
-FlagDefaultDescription--apk-output <dir>autoCopy final APK to this directory after build completes.--skip-lintfalseSkip Android lint checks. Speeds up CI builds where lint runs separately.--skip-testsfalseSkip unit tests. Use for fast iteration builds.--android-mode <mode>java-onlyjava-only = distribute Java phase only. full = attempt full distribution (experimental).--sign-keystore <path>autoOverride keystore path. Useful in CI where keystore lives outside project.--aabfalseBuild an Android App Bundle (.aab) instead of APK. Release only.
-6.3  What the terminal shows during an Android build
-
-$ distbuild build --type release
- 
-  distbuild  release build  •  3 workers available
- 
-  Phase 1/5  Resource processing ..............  done  (local,  4.2s)
-  Phase 2/5  Java compilation
-    [:common]      worker-alice    ????????????  done   1.1s  (cache hit)
-    [:core]        worker-bob      ????????????  done   2.3s
-    [:android-lib] worker-alice    ????????????  done   3.1s
-    [:app]         worker-charlie  ????????????  done   4.8s
-  Phase 2/5  Java compilation ....................  done  (distributed, 4.8s)
-  Phase 3/5  Dex compilation (d8) ...............  done  (local,  6.1s)
-  Phase 4/5  APK packaging .......................  done  (local,  1.3s)
-  Phase 5/5  APK signing .........................  done  (local,  0.4s)
- 
-  Build successful  •  total 17.9s  (vs ~41s local)
- 
-  Output:  app/build/outputs/apk/release/app-release.apk  (8.2 MB)
-  Signed:  YES  •  v1  scheme  •  alias: my-key-alias
- 
-
-
-
-7. What to Add to the Coordinator
-
-
-The coordinator needs two Android-aware additions: a module type detector so it knows which modules are Android vs plain Java, and an Android classpath resolver that provides android.jar to workers.
-
-7.1  ModuleTypeDetector.java
-
-// coordinator/src/main/java/com/distbuild/coordinator/ModuleTypeDetector.java
- 
-public class ModuleTypeDetector {
- 
-    public enum ModuleType { JAVA, ANDROID_APP, ANDROID_LIB }
- 
-    /**
-     * Inspects the Gradle project model to determine module type.
-     * Android modules have the 'com.android.application' or
-     * 'com.android.library' plugin applied.
-     */
-    public ModuleType detect(GradleProject project) {
-        Set<String> pluginIds = project.getPlugins()
-            .stream()
-            .map(Plugin::getId)
-            .collect(Collectors.toSet());
- 
-        if (pluginIds.contains("com.android.application")) return ModuleType.ANDROID_APP;
-        if (pluginIds.contains("com.android.library"))     return ModuleType.ANDROID_LIB;
-        return ModuleType.JAVA;
-    }
- 
-    public boolean isAndroid(ModuleType type) {
-        return type == ModuleType.ANDROID_APP || type == ModuleType.ANDROID_LIB;
-    }
-}
-
-7.2  AndroidClasspathResolver.java
-
-Android modules need android.jar on the classpath during Java compilation — this is the stub JAR that contains Android SDK class signatures. Workers need it too.
-
-// Finds android.jar in the local Android SDK and uploads it to cache
-// so workers can fetch it by hash like any other JAR.
-public class AndroidClasspathResolver {
- 
-    public File resolveAndroidJar(int compileSdkVersion) {
-        // Check ANDROID_HOME env var first
-        String androidHome = System.getenv("ANDROID_HOME");
-        if (androidHome == null) androidHome = System.getenv("ANDROID_SDK_ROOT");
-        if (androidHome == null) {
-            // Common default locations
-            androidHome = OS.isWindows()
-                ? System.getenv("LOCALAPPDATA") + "\\Android\\Sdk"
-                : System.getProperty("user.home") + "/Android/Sdk";
-        }
- 
-        Path jar = Paths.get(androidHome,
-            "platforms",
-            "android-" + compileSdkVersion,
-            "android.jar");
- 
-        if (!Files.exists(jar)) {
-            throw new MissingAndroidSdkException(
-                "android.jar not found at: " + jar + "\n" +
-                "Install Android SDK platform " + compileSdkVersion + " via:\n" +
-                "  sdkmanager \"platforms;android-" + compileSdkVersion + "\""
-            );
-        }
-        return jar.toFile();
-    }
-}
-
-  NOTE  Workers do NOT need a full Android SDK installation. They only need android.jar, which the coordinator uploads to the shared cache by its SHA-256 hash. Workers fetch it like any other dependency JAR.
-
-
-
-8. Where the APK Outputs Go
-
-
-Android Gradle Plugin writes APK outputs to predictable paths. distbuild does not move them — AGP puts them here after the build completes:
-
-Build typeAPK pathNotesdebugapp/build/outputs/apk/debug/app-debug.apkAuto-signed with a debug keystore. Works on any device with USB debugging.releaseapp/build/outputs/apk/release/app-release.apkSigned with your keystore. Ready for Play Store upload or direct install.release (AAB)app/build/outputs/bundle/release/app-release.aabUse --aab flag. Required for new Play Store apps since Aug 2021.
-When you use --apk-output the CLI copies the relevant APK to your specified directory after the build:
-
-$ distbuild build --type release --apk-output ./dist/
- 
-  # After build:
-  # ./dist/app-release-1.0.0.apk    (named with versionName from build.gradle)
-
-8.1  Verifying a signed APK
-
-# Check that the APK is properly signed
-$ apksigner verify --verbose app/build/outputs/apk/release/app-release.apk
- 
-# Or with jarsigner (comes with JDK)
-$ jarsigner -verify -verbose -certs app/build/outputs/apk/release/app-release.apk
- 
-# Check which signing key was used
-$ apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
-
-
-
-9. DAG Behaviour with Mixed Modules
-
-
-The dependency graph (DAG) engine already handles mixed modules correctly because module type does not change dependency resolution. What changes is how each module is compiled. Here is how a real mixed project DAG looks:
-
-  Build order for: distbuild build --type release
- 
-  Layer 0  (no dependencies — start immediately, in parallel):
-    [:common]       Java module    ? dispatch to worker
- 
-  Layer 1  (depends on :common):
-    [:core]         Java module    ? dispatch to worker
-    [:android-lib]  Android lib    ? Java phase to worker, dex local after
- 
-  Layer 2  (depends on :core, :android-lib):
-    [:app]          Android app    ? Java phase to worker, then dex+sign local
- 
-  Total distributed tasks : 4  (all Java compilation phases)
-  Total local tasks        : 3  (dex for android-lib + dex + sign for app)
-
-ModuleTypeJava phasePost-Java phaseBlocks:commonJavaWorkerNone — JAR doneNothing:coreJavaWorkerNone — JAR done:common:android-libAndroid libWorkerd8 dex (local):common:appAndroid appWorkerd8 + aapt2 + sign (local):core, :android-lib
-  TIP  Cache keys for Android modules include the compileSdkVersion and AGP version so that upgrading either automatically invalidates stale cache entries.
-
-
-
-10. CI / CD Pipeline for APK Builds
-
-
-This is a complete GitHub Actions workflow that builds both the debug APK (for QA) and the signed release APK (for distribution) using distbuild.
-
-# .github/workflows/apk-build.yml
-name: Build APKs
- 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
- 
-jobs:
-  build:
-    runs-on: ubuntu-latest
- 
-    steps:
-      - uses: actions/checkout@v4
- 
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
- 
-      # Install Android SDK platform
-      - uses: android-actions/setup-android@v3
-        with:
-          api-level: 34
- 
-      # Install distbuild
-      - name: Install distbuild
-        run: curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/distbuild/main/installer/install.sh | bash
- 
-      # Write keystore.properties from GitHub Secrets
-      - name: Write signing config
-        run: |
-          mkdir -p app/signing
-          echo "storeFile=../signing/release.jks"   > app/signing/keystore.properties
-          echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> app/signing/keystore.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}"           >> app/signing/keystore.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}"     >> app/signing/keystore.properties
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/signing/release.jks
- 
-      # Start coordinator + worker on the CI machine
-      - name: Start distbuild
-        run: |
-          distbuild coordinator start --daemonize
-          distbuild worker start --daemonize --threads 4
- 
-      # Build debug APK
-      - name: Build debug APK
-        run: distbuild build --type debug --apk-output artifacts/
- 
-      # Build signed release APK
-      - name: Build release APK
-        run: distbuild build --type release --apk-output artifacts/
- 
-      # Upload both APKs as CI artifacts
-      - uses: actions/upload-artifact@v4
-        with:
-          name: apks
-          path: artifacts/*.apk
- 
-      - name: Cleanup
-        if: always()
-        run: distbuild coordinator stop
-
-GitHub SecretWhat to put in itSTORE_PASSWORDYour keystore passwordKEY_ALIASYour key alias (from keytool)KEY_PASSWORDYour key passwordKEYSTORE_BASE64base64 -w 0 app/signing/my-release-key.jks — the entire keystore file as base64
-
-
-11. Common Problems and Fixes
-
-
-ProblemCauseFix'android.jar not found'ANDROID_HOME not set or SDK platform missingRun: sdkmanager "platforms;android-34". Set ANDROID_HOME.Release APK unsigned / install failskeystore.properties missing or wrong pathCheck file exists at app/signing/keystore.properties. Run distbuild doctor.Worker compiles Android module but gets errorsWorker missing android.jarCoordinator auto-uploads android.jar to cache. Check Redis is running.R8 / ProGuard errors on release buildMinification removes needed classesAdd keep rules to proguard-rules.pro. This is unrelated to distbuild.Debug APK has different package IDapplicationIdSuffix = ".debug" in buildTypesExpected. Use adb install -r to reinstall. Both can coexist on device.Build slower than beforeAndroid Java compilation is small — dex dominatesNormal for small apps. Speedup is larger for bigger codebases.'Duplicate class' errorsMultiple modules providing same class to dexCheck for duplicate dependencies between :android-lib and :app.
-12. Quick Reference — All APK Commands
-
-
-# ?? Build commands ??????????????????????????????????????????????
-$ distbuild build                              # debug build (default)
-$ distbuild build --type debug                 # explicit debug
-$ distbuild build --type release               # signed release APK
-$ distbuild build --type release --aab         # release App Bundle
-$ distbuild build --type release --skip-lint   # skip lint (faster CI)
-$ distbuild build --module :app --type release # build only the app module
-$ distbuild build --type release --apk-output ./dist/
- 
-# ?? Verify output ???????????????????????????????????????????????
-$ apksigner verify --verbose app/build/outputs/apk/release/app-release.apk
-$ apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
- 
-# ?? Install directly to connected device ????????????????????????
-$ adb install app/build/outputs/apk/debug/app-debug.apk
-$ adb install app/build/outputs/apk/release/app-release.apk
- 
-# ?? Cache management for Android ????????????????????????????????
-$ distbuild cache clear --module :app          # force :app recompile
-$ distbuild cache clear --type release         # clear all release artifacts
- 
-# ?? Diagnose Android-specific issues ????????????????????????????
-$ distbuild doctor                             # checks ANDROID_HOME, keystore, SDK
-
-
-distbuild  |  Android APK + Java JAR Mixed Build Guide  |  v1.0
