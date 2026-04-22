@@ -94,6 +94,15 @@ If `distbuild doctor` shows issues:
    # or download from https://adoptium.net/
    ```
 
+4. **"'distbuild' command not recognized"** - Add Scoop to PATH:
+   ```powershell
+   # Add Scoop shims to PATH manually
+   [Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";C:\Users\jayde\scoop\shims", "User")
+   
+   # Then restart PowerShell and try again
+   distbuild --help
+   ```
+
 ### Advanced Usage
 ```bash
 # Interactive setup
