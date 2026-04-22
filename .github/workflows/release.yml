@@ -151,6 +151,8 @@ jobs:
           # gpg --default-key you@example.com -abs -o Release.gpg Release
           # gpg --default-key you@example.com --clearsign -o InRelease Release
           
+          git config user.name "Aaryan1101"
+          git config user.email "aryanxp0909@gmail.com"
           git add -A
           git commit -m "apt repo: distbuild v$VERSION"
           git push
@@ -167,6 +169,8 @@ jobs:
           # gpg --default-key you@example.com -abs -o Release.gpg Release
           # gpg --default-key you@example.com --clearsign -o InRelease Release
           
+          git config user.name "Aaryan1101"
+          git config user.email "aryanxp0909@gmail.com"
           git add -A
           git commit -m "apt repo: distbuild v$VERSION"
           git push
