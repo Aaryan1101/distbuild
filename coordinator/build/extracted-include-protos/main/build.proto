@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package com.distbuild.common;
+
+option java_package = "com.distbuild.common.grpc";
+option java_outer_classname = "BuildProto";
+
+// Build service definition
+service BuildService {
+  // Worker registers with coordinator
+  rpc RegisterWorker(RegisterWorkerRequest) returns (RegisterWorkerResponse);
+  
+  // Coordinator sends compile task to worker
+  rpc CompileTask(CompileTaskRequest) returns (CompileTaskResponse);
+  
+  // Worker sends heartbeat to coordinator
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  
+  // Get worker status
+  rpc GetWorkerStatus(GetWorkerStatusRequest) returns (GetWorkerStatusResponse);
+}
+
+// Messages for worker registration
+message RegisterWorkerRequest {
+  string worker_id = 1;
+  string host = 2;
+  int32 port = 3;
+  int32 max_concurrent_tasks = 4;
+  string java_version = 5;
+  map<string, string> capabilities = 6;
+}
+
+message RegisterWorkerResponse {
+  bool success = 1;
+  string message = 2;
+  int64 registration_time = 3;
+}
+
+// Messages for compile tasks
+message CompileTaskRequest {
+  string task_id = 1;
+  string module_name = 2;
+  repeated string source_files = 3;
+  repeated string classpath_jars = 4;
+  repeated string jar_hashes = 5;
+  string output_directory = 6;
+  map<string, string> compiler_options = 7;
+  string java_version = 8;
+  bytes incremental_state = 9;
+}
+
+message CompileTaskResponse {
+  string task_id = 1;
+  bool success = 2;
+  string error_message = 3;
+  repeated string compiled_files = 4;
+  repeated string class_files = 5;
+  int64 compile_time_ms = 6;
+  bytes new_incremental_state = 7;
+}
+
+// Messages for heartbeat
+message HeartbeatRequest {
+  string worker_id = 1;
+  int32 active_tasks = 2;
+  int64 timestamp = 3;
+  WorkerStatus status = 4;
+}
+
+message HeartbeatResponse {
+  bool acknowledged = 1;
+  int64 server_timestamp = 2;
+}
+
+// Messages for worker status
+message GetWorkerStatusRequest {
+  string worker_id = 1;
+}
+
+message GetWorkerStatusResponse {
+  WorkerInfo worker_info = 1;
+  repeated TaskInfo active_tasks = 2;
+  WorkerMetrics metrics = 3;
+}
+
+// Supporting message types
+message WorkerInfo {
+  string worker_id = 1;
+  string host = 2;
+  int32 port = 3;
+  string java_version = 4;
+  WorkerStatus status = 5;
+  int64 registration_time = 6;
+  int64 last_heartbeat = 7;
+}
+
+message TaskInfo {
+  string task_id = 1;
+  string module_name = 2;
+  TaskStatus status = 3;
+  int64 start_time = 4;
+  int64 estimated_completion_time = 5;
+}
+
+message WorkerMetrics {
+  int32 total_tasks_completed = 1;
+  int64 total_compile_time_ms = 2;
+  double average_compile_time_ms = 3;
+  int32 current_load = 4;
+  int32 max_capacity = 5;
+}
+
+enum WorkerStatus {
+  WORKER_STATUS_UNKNOWN = 0;
+  WORKER_STATUS_AVAILABLE = 1;
+  WORKER_STATUS_BUSY = 2;
+  WORKER_STATUS_OFFLINE = 3;
+  WORKER_STATUS_ERROR = 4;
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNKNOWN = 0;
+  TASK_STATUS_PENDING = 1;
+  TASK_STATUS_RUNNING = 2;
+  TASK_STATUS_COMPLETED = 3;
+  TASK_STATUS_FAILED = 4;
+}

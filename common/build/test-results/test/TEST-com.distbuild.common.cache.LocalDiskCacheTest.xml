@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.distbuild.common.cache.LocalDiskCacheTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-04-21T14:54:09" hostname="POTATO" time="2.532">
+  <properties/>
+  <testcase name="testPersistence" classname="com.distbuild.common.cache.LocalDiskCacheTest" time="0.015"/>
+  <testcase name="testClear" classname="com.distbuild.common.cache.LocalDiskCacheTest" time="0.011"/>
+  <testcase name="testStats" classname="com.distbuild.common.cache.LocalDiskCacheTest" time="0.008"/>
+  <testcase name="testPutAndGet" classname="com.distbuild.common.cache.LocalDiskCacheTest" time="0.006"/>
+  <testcase name="testCacheMiss" classname="com.distbuild.common.cache.LocalDiskCacheTest" time="0.002"/>
+  <testcase name="testContains" classname="com.distbuild.common.cache.LocalDiskCacheTest" time="0.005"/>
+  <testcase name="testFailedCompilationNotCached" classname="com.distbuild.common.cache.LocalDiskCacheTest" time="0.004"/>
+  <testcase name="testEviction" classname="com.distbuild.common.cache.LocalDiskCacheTest" time="0.024"/>
+  <testcase name="testLargeData" classname="com.distbuild.common.cache.LocalDiskCacheTest" time="0.074"/>
+  <testcase name="testRemove" classname="com.distbuild.common.cache.LocalDiskCacheTest" time="0.005"/>
+  <testcase name="testConcurrentAccess" classname="com.distbuild.common.cache.LocalDiskCacheTest" time="2.374"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

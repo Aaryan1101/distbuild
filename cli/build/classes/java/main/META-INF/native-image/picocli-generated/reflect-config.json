@@ -1,0 +1,332 @@
+[
+  {
+    "name" : "com.distbuild.cli.DistBuildCli",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "spec" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.AndroidBuildCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.distbuild.cli.commands.AndroidBuildCommand$Build",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "aab" },
+      { "name" : "apkOutput" },
+      { "name" : "buildType" },
+      { "name" : "skipLint" },
+      { "name" : "verbose" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.AndroidBuildCommand$Detect",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.distbuild.cli.commands.AndroidBuildCommand$Setup",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "androidSdk" },
+      { "name" : "autoInstall" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.BuildCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "buildType" },
+      { "name" : "dryRun" },
+      { "name" : "noCache" },
+      { "name" : "verbose" },
+      { "name" : "workers" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.BuildCommand$BuildType",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.distbuild.cli.commands.CacheCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.distbuild.cli.commands.CacheCommand$Clear",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "configFile" },
+      { "name" : "confirm" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.CacheCommand$Stats",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "configFile" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.ConfigCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.distbuild.cli.commands.ConfigCommand$Get",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "configFile" },
+      { "name" : "key" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.ConfigCommand$List",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "configFile" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.ConfigCommand$Reset",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "configFile" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.ConfigCommand$Set",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "configFile" },
+      { "name" : "key" },
+      { "name" : "value" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.CoordinatorCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.distbuild.cli.commands.CoordinatorCommand$Start",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "cacheDir" },
+      { "name" : "configFile" },
+      { "name" : "loadBalancing" },
+      { "name" : "managementPort" },
+      { "name" : "noDiscovery" },
+      { "name" : "port" },
+      { "name" : "workerConfig" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.CoordinatorCommand$Status",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "host" },
+      { "name" : "managementPort" },
+      { "name" : "port" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.CoordinatorCommand$Stop",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "host" },
+      { "name" : "managementPort" },
+      { "name" : "port" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.DoctorCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "autoFix" },
+      { "name" : "verbose" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.GenerateCompletionCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "outputDir" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.InitCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.distbuild.cli.commands.LogsCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "coordinator" },
+      { "name" : "follow" },
+      { "name" : "level" },
+      { "name" : "lines" },
+      { "name" : "workerId" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.StatusCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "host" },
+      { "name" : "port" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.VersionCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.distbuild.cli.commands.WorkerCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "com.distbuild.cli.commands.WorkerCommand$Join",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "configFile" },
+      { "name" : "coordinatorHost" },
+      { "name" : "coordinatorPort" },
+      { "name" : "managementPort" },
+      { "name" : "maxTasks" },
+      { "name" : "noDiscovery" },
+      { "name" : "workerId" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.WorkerCommand$Leave",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "managementPort" }
+    ]
+  },
+  {
+    "name" : "com.distbuild.cli.commands.WorkerCommand$Status",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "managementPort" }
+    ]
+  },
+  {
+    "name" : "java.lang.Boolean",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "java.lang.Integer",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "java.util.Collections$UnmodifiableRandomAccessList",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  },
+  {
+    "name" : "picocli.CommandLine$AutoHelpMixin",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "helpRequested" },
+      { "name" : "versionRequested" }
+    ]
+  }
+]

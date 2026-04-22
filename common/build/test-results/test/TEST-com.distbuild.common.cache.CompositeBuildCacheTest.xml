@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.distbuild.common.cache.CompositeBuildCacheTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-04-21T14:54:08" hostname="POTATO" time="0.896">
+  <properties/>
+  <testcase name="testClearBothCaches" classname="com.distbuild.common.cache.CompositeBuildCacheTest" time="0.623"/>
+  <testcase name="testL2CacheHit" classname="com.distbuild.common.cache.CompositeBuildCacheTest" time="0.206"/>
+  <testcase name="testDetailedStats" classname="com.distbuild.common.cache.CompositeBuildCacheTest" time="0.022"/>
+  <testcase name="testPutToBothCaches" classname="com.distbuild.common.cache.CompositeBuildCacheTest" time="0.01"/>
+  <testcase name="testCacheMiss" classname="com.distbuild.common.cache.CompositeBuildCacheTest" time="0.008"/>
+  <testcase name="testRemoveFromBothCaches" classname="com.distbuild.common.cache.CompositeBuildCacheTest" time="0.013"/>
+  <testcase name="testL1CacheHit" classname="com.distbuild.common.cache.CompositeBuildCacheTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[SLF4J: No SLF4J providers were found.
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See https://www.slf4j.org/codes.html#noProviders for further details.
+]]></system-err>
+</testsuite>

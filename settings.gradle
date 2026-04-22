@@ -1,0 +1,3 @@
+rootProject.name = 'distcc'
+
+include 'common', 'coordinator', 'worker', 'gradle-plugin', 'cli'

@@ -1,0 +1,15 @@
+---
+coordinator:
+  host: "localhost"
+  port: 8080
+  management-port: 8081
+  cache-dir: "./distbuild-cache"
+  discovery-enabled: true
+cache:
+  dir: "./distbuild-cache"
+  ttl-days: 7
+  max-size-mb: 1024
+workers:
+  timeout-seconds: 120
+  max-tasks: 4
+  java-version: "17"

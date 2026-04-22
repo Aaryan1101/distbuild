@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=edge"/>
+<title>Test results - Class com.distbuild.coordinator.SimpleCoordinatorTest</title>
+<link href="../css/base-style.css" rel="stylesheet" type="text/css"/>
+<link href="../css/style.css" rel="stylesheet" type="text/css"/>
+<script src="../js/report.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="content">
+<h1>Class com.distbuild.coordinator.SimpleCoordinatorTest</h1>
+<div class="breadcrumbs">
+<a href="../index.html">all</a> &gt; 
+<a href="../packages/com.distbuild.coordinator.html">com.distbuild.coordinator</a> &gt; SimpleCoordinatorTest</div>
+<div id="summary">
+<table>
+<tr>
+<td>
+<div class="summaryGroup">
+<table>
+<tr>
+<td>
+<div class="infoBox" id="tests">
+<div class="counter">6</div>
+<p>tests</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="failures">
+<div class="counter">0</div>
+<p>failures</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="ignored">
+<div class="counter">0</div>
+<p>ignored</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="duration">
+<div class="counter">8.201s</div>
+<p>duration</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+<td>
+<div class="infoBox success" id="successRate">
+<div class="percent">100%</div>
+<p>successful</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div id="tabs">
+<ul class="tabLinks">
+<li>
+<a href="#tab0">Tests</a>
+</li>
+<li>
+<a href="#tab1">Standard output</a>
+</li>
+</ul>
+<div id="tab0" class="tab">
+<h2>Tests</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Duration</th>
+<th>Result</th>
+</tr>
+</thead>
+<tr>
+<td class="success">testAnnotationProcessorFiltering</td>
+<td class="success">1.217s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">testCacheHits</td>
+<td class="success">1.199s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">testDependencyOrdering</td>
+<td class="success">2.903s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">testEmptyGraphBuild</td>
+<td class="success">0.214s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">testParallelCompilation</td>
+<td class="success">1.438s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">testSingleModuleBuild</td>
+<td class="success">1.230s</td>
+<td class="success">passed</td>
+</tr>
+</table>
+</div>
+<div id="tab1" class="tab">
+<h2>Standard output</h2>
+<span class="code">
+<pre>20:24:14.573 [Test worker] INFO com.distbuild.common.cache.LocalDiskCache -- LocalDiskCache initialized at C:\Users\jayde\AppData\Local\Temp\junit6869626434099707338\cache with max size 1073741824 bytes
+20:24:14.586 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- SimpleCoordinator initialized with cache
+20:24:14.589 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- Starting distributed build for 0 modules
+20:24:14.608 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Starting topological sort for 0 modules
+20:24:14.609 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Topological sort completed: []
+20:24:14.612 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing 0 parallel batches for 0 modules
+20:24:14.615 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Build completed. Success: 0, Failed: 0
+20:24:14.625 [Test worker] INFO com.distbuild.common.cache.LocalDiskCache -- LocalDiskCache initialized at C:\Users\jayde\AppData\Local\Temp\junit4772872987187705734\cache with max size 1073741824 bytes
+20:24:14.627 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- SimpleCoordinator initialized with cache
+20:24:14.633 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- Starting distributed build for 3 modules
+20:24:14.634 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Starting topological sort for 3 modules
+20:24:14.635 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Topological sort completed: [module-0, module-2, module-1]
+20:24:14.635 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing 1 parallel batches for 3 modules
+20:24:14.636 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing batch 1/1 with 3 modules: [module-0, module-2, module-1]
+20:24:14.637 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module: module-0
+20:24:14.637 [SimpleCoordinator-3] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module: module-2
+20:24:14.637 [SimpleCoordinator-4] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module: module-1
+20:24:14.653 [SimpleCoordinator-3] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module module-2 locally (simulated)
+20:24:14.653 [SimpleCoordinator-4] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module module-1 locally (simulated)
+20:24:14.653 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module module-0 locally (simulated)
+20:24:14.654 [SimpleCoordinator-3] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Simulating compilation of module module-2
+20:24:14.654 [SimpleCoordinator-4] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Simulating compilation of module module-1
+20:24:14.654 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Simulating compilation of module module-0
+20:24:16.042 [SimpleCoordinator-3] DEBUG com.distbuild.common.cache.LocalDiskCache -- Cached result for key: module-2-207760492-0-17 (397 bytes)
+20:24:16.049 [SimpleCoordinator-2] DEBUG com.distbuild.common.cache.LocalDiskCache -- Cached result for key: module-0-150502190-0-17 (397 bytes)
+20:24:16.050 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Module module-0 compiled successfully in 836ms
+20:24:16.050 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Module module-2 compiled successfully in 682ms
+20:24:16.052 [SimpleCoordinator-4] DEBUG com.distbuild.common.cache.LocalDiskCache -- Cached result for key: module-1-179131341-0-17 (397 bytes)
+20:24:16.052 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Module module-1 compiled successfully in 785ms
+20:24:16.053 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Build completed. Success: 3, Failed: 0
+20:24:16.062 [Test worker] INFO com.distbuild.common.cache.LocalDiskCache -- LocalDiskCache initialized at C:\Users\jayde\AppData\Local\Temp\junit12383943429717141113\cache with max size 1073741824 bytes
+20:24:16.063 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- SimpleCoordinator initialized with cache
+20:24:16.063 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- Starting distributed build for 1 modules
+20:24:16.063 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Starting topological sort for 1 modules
+20:24:16.065 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Topological sort completed: [test-module]
+20:24:16.066 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing 1 parallel batches for 1 modules
+20:24:16.066 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing batch 1/1 with 1 modules: [test-module]
+20:24:16.066 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module: test-module
+20:24:16.066 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module test-module locally (simulated)
+20:24:16.066 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Simulating compilation of module test-module
+20:24:17.200 [SimpleCoordinator-2] DEBUG com.distbuild.common.cache.LocalDiskCache -- Cached result for key: test-module-336259228-0-17 (384 bytes)
+20:24:17.200 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Module test-module compiled successfully in 641ms
+20:24:17.200 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Build completed. Success: 1, Failed: 0
+20:24:17.200 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- Starting distributed build for 1 modules
+20:24:17.204 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Starting topological sort for 1 modules
+20:24:17.204 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Topological sort completed: [test-module]
+20:24:17.204 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing 1 parallel batches for 1 modules
+20:24:17.204 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing batch 1/1 with 1 modules: [test-module]
+20:24:17.204 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module: test-module
+20:24:17.258 [SimpleCoordinator-2] DEBUG com.distbuild.common.cache.LocalDiskCache -- Cache hit for key: test-module-336259228-0-17 (384 bytes)
+20:24:17.258 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Cache hit for module: test-module
+20:24:17.258 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Module test-module compiled successfully in 641ms
+20:24:17.258 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Build completed. Success: 1, Failed: 0
+20:24:17.262 [Test worker] INFO com.distbuild.common.cache.LocalDiskCache -- LocalDiskCache initialized at C:\Users\jayde\AppData\Local\Temp\junit5695804569248896828\cache with max size 1073741824 bytes
+20:24:17.262 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- SimpleCoordinator initialized with cache
+20:24:17.262 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- Starting distributed build for 2 modules
+20:24:17.263 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Starting topological sort for 2 modules
+20:24:17.263 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Topological sort completed: [normal-module, module-with-ap]
+20:24:17.263 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing 1 parallel batches for 2 modules
+20:24:17.263 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing batch 1/1 with 1 modules: [normal-module]
+20:24:17.263 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module: normal-module
+20:24:17.263 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module normal-module locally (simulated)
+20:24:17.263 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Simulating compilation of module normal-module
+20:24:18.475 [SimpleCoordinator-2] DEBUG com.distbuild.common.cache.LocalDiskCache -- Cached result for key: normal-module-1769745895-0-17 (390 bytes)
+20:24:18.475 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Module normal-module compiled successfully in 539ms
+20:24:18.475 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Build completed. Success: 1, Failed: 0
+20:24:18.478 [Test worker] INFO com.distbuild.common.cache.LocalDiskCache -- LocalDiskCache initialized at C:\Users\jayde\AppData\Local\Temp\junit9173604928960473254\cache with max size 1073741824 bytes
+20:24:18.478 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- SimpleCoordinator initialized with cache
+20:24:18.480 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- Starting distributed build for 3 modules
+20:24:18.480 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Starting topological sort for 3 modules
+20:24:18.480 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Topological sort completed: [module-a, module-b, module-c]
+20:24:18.480 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing 3 parallel batches for 3 modules
+20:24:18.480 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing batch 1/3 with 1 modules: [module-a]
+20:24:18.483 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module: module-a
+20:24:18.484 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module module-a locally (simulated)
+20:24:18.485 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Simulating compilation of module module-a
+20:24:19.539 [SimpleCoordinator-2] DEBUG com.distbuild.common.cache.LocalDiskCache -- Cached result for key: module-a-714763697-0-17 (372 bytes)
+20:24:19.541 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Module module-a compiled successfully in 1028ms
+20:24:19.541 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing batch 2/3 with 1 modules: [module-b]
+20:24:19.541 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module: module-b
+20:24:19.541 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module module-b locally (simulated)
+20:24:19.541 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Simulating compilation of module module-b
+20:24:20.137 [SimpleCoordinator-2] DEBUG com.distbuild.common.cache.LocalDiskCache -- Cached result for key: module-b-743392848-0-17 (372 bytes)
+20:24:20.138 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Module module-b compiled successfully in 1059ms
+20:24:20.138 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing batch 3/3 with 1 modules: [module-c]
+20:24:20.138 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module: module-c
+20:24:20.138 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module module-c locally (simulated)
+20:24:20.138 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Simulating compilation of module module-c
+20:24:21.376 [SimpleCoordinator-2] DEBUG com.distbuild.common.cache.LocalDiskCache -- Cached result for key: module-c-772021999-0-17 (371 bytes)
+20:24:21.376 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Module module-c compiled successfully in 720ms
+20:24:21.376 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Build completed. Success: 3, Failed: 0
+20:24:21.380 [Test worker] INFO com.distbuild.common.cache.LocalDiskCache -- LocalDiskCache initialized at C:\Users\jayde\AppData\Local\Temp\junit17535171174850194118\cache with max size 1073741824 bytes
+20:24:21.380 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- SimpleCoordinator initialized with cache
+20:24:21.380 [Test worker] INFO com.distbuild.coordinator.SimpleCoordinator -- Starting distributed build for 1 modules
+20:24:21.380 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Starting topological sort for 1 modules
+20:24:21.380 [SimpleCoordinator-1] DEBUG com.distbuild.common.graph.TopologicalSorter -- Topological sort completed: [test-module]
+20:24:21.380 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing 1 parallel batches for 1 modules
+20:24:21.380 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Executing batch 1/1 with 1 modules: [test-module]
+20:24:21.382 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module: test-module
+20:24:21.382 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Compiling module test-module locally (simulated)
+20:24:21.382 [SimpleCoordinator-2] DEBUG com.distbuild.coordinator.SimpleCoordinator -- Simulating compilation of module test-module
+20:24:22.606 [SimpleCoordinator-2] DEBUG com.distbuild.common.cache.LocalDiskCache -- Cached result for key: test-module-336259228-0-17 (384 bytes)
+20:24:22.606 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Module test-module compiled successfully in 739ms
+20:24:22.606 [SimpleCoordinator-1] INFO com.distbuild.coordinator.SimpleCoordinator -- Build completed. Success: 1, Failed: 0
+</pre>
+</span>
+</div>
+</div>
+<div id="footer">
+<p>
+<div>
+<label class="hidden" id="label-for-line-wrapping-toggle" for="line-wrapping-toggle">Wrap lines
+<input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
+</label>
+</div>Generated by 
+<a href="http://www.gradle.org">Gradle 8.3</a> at 21-Apr-2026, 8:24:22 pm</p>
+</div>
+</div>
+</body>
+</html>

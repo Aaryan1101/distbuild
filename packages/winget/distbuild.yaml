@@ -1,0 +1,26 @@
+# Created with YamlCreate.ps1 v2.4.1
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.4.0.schema.json
+
+PackageIdentifier: Aaryan1101.distbuild
+PackageVersion: 1.0.0
+PackageLocale: en-US
+Publisher: Aaryan
+PackageName: distbuild
+License: Apache-2.0
+ShortDescription: Distributed Java build system
+Description: Speeds up Gradle builds by distributing compilation across your team's machines.
+Tags:
+- java
+- build
+- gradle
+- developer-tools
+Installers:
+- Architecture: x64
+  InstallerType: script
+  InstallerUrl: https://raw.githubusercontent.com/YOUR_USERNAME/distbuild/main/installer/install.ps1
+  InstallerSha256: PLACEHOLDER_SHA256_HERE
+  InstallerSwitches:
+    Silent: '-NonInteractive'
+  UpgradeBehavior: install
+ManifestType: singleton
+ManifestVersion: 1.4.0

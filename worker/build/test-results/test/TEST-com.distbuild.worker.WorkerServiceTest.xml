@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.distbuild.worker.WorkerServiceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-04-21T14:55:34" hostname="POTATO" time="2.895">
+  <properties/>
+  <testcase name="testCompilationWithCompilerOptions" classname="com.distbuild.worker.WorkerServiceTest" time="0.467"/>
+  <testcase name="testSimpleCompilation" classname="com.distbuild.worker.WorkerServiceTest" time="0.421"/>
+  <testcase name="testWorkspaceCleanup" classname="com.distbuild.worker.WorkerServiceTest" time="0.434"/>
+  <testcase name="testMultipleSourceFiles" classname="com.distbuild.worker.WorkerServiceTest" time="0.449"/>
+  <testcase name="testCompilationWithClasspath" classname="com.distbuild.worker.WorkerServiceTest" time="0.09"/>
+  <testcase name="testErrorHandling" classname="com.distbuild.worker.WorkerServiceTest" time="0.457"/>
+  <testcase name="testConcurrentTasks" classname="com.distbuild.worker.WorkerServiceTest" time="0.574"/>
+  <system-out><![CDATA[20:25:34.405 [Test worker] INFO com.distbuild.worker.WorkerService -- WorkerService test-worker initialized with workspace: worker-workspace-test-worker
+20:25:34.406 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker starting compilation task options-task for module options-module
+20:25:34.416 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compiling module options-module with 1 source files
+20:25:34.416 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compilation command: javac -d worker-workspace-test-worker\task-options-task\classes -Xlint:all -g worker-workspace-test-worker\task-options-task\src\src\main\java\WithOptions.java
+20:25:34.850 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Compilation successful for module options-module in 432ms
+20:25:34.851 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker completed task options-task with success: true
+20:25:34.868 [Test worker] INFO com.distbuild.worker.WorkerService -- WorkerService test-worker initialized with workspace: worker-workspace-test-worker
+20:25:34.869 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker starting compilation task test-task for module test-module
+20:25:34.877 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compiling module test-module with 1 source files
+20:25:34.878 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compilation command: javac -d worker-workspace-test-worker\task-test-task\classes worker-workspace-test-worker\task-test-task\src\src\main\java\Test.java
+20:25:35.278 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Compilation successful for module test-module in 399ms
+20:25:35.279 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker completed task test-task with success: true
+20:25:35.290 [Test worker] INFO com.distbuild.worker.WorkerService -- WorkerService test-worker initialized with workspace: worker-workspace-test-worker
+20:25:35.293 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker starting compilation task cleanup-task for module cleanup-module
+20:25:35.298 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compiling module cleanup-module with 1 source files
+20:25:35.299 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compilation command: javac -d worker-workspace-test-worker\task-cleanup-task\classes worker-workspace-test-worker\task-cleanup-task\src\src\main\java\Cleanup.java
+20:25:35.709 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Compilation successful for module cleanup-module in 410ms
+20:25:35.710 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker completed task cleanup-task with success: true
+20:25:35.719 [Test worker] INFO com.distbuild.worker.WorkerService -- Shutting down WorkerService test-worker
+20:25:35.723 [Test worker] INFO com.distbuild.worker.WorkerService -- WorkerService test-worker initialized with workspace: worker-workspace-test-worker
+20:25:35.725 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker starting compilation task multi-task for module multi-module
+20:25:35.736 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compiling module multi-module with 2 source files
+20:25:35.738 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compilation command: javac -d worker-workspace-test-worker\task-multi-task\classes worker-workspace-test-worker\task-multi-task\src\src\main\java\Class1.java worker-workspace-test-worker\task-multi-task\src\src\main\java\Class2.java
+20:25:36.156 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Compilation successful for module multi-module in 417ms
+20:25:36.157 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker completed task multi-task with success: true
+20:25:36.173 [Test worker] INFO com.distbuild.worker.WorkerService -- WorkerService test-worker initialized with workspace: worker-workspace-test-worker
+20:25:36.174 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker starting compilation task classpath-task for module classpath-module
+20:25:36.183 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compiling module classpath-module with 1 source files
+20:25:36.183 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compilation command: javac -d worker-workspace-test-worker\task-classpath-task\classes -cp lib/dependency.jar worker-workspace-test-worker\task-classpath-task\src\src\main\java\WithDeps.java
+20:25:36.250 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Compilation successful for module classpath-module in 65ms
+20:25:36.251 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker completed task classpath-task with success: true
+20:25:36.264 [Test worker] INFO com.distbuild.worker.WorkerService -- WorkerService test-worker initialized with workspace: worker-workspace-test-worker
+20:25:36.265 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker starting compilation task error-task for module error-module
+20:25:36.274 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compiling module error-module with 1 source files
+20:25:36.275 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compilation command: javac -d worker-workspace-test-worker\task-error-task\classes worker-workspace-test-worker\task-error-task\src\src\main\java\Error.java
+20:25:36.709 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Compilation successful for module error-module in 433ms
+20:25:36.709 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker completed task error-task with success: true
+20:25:36.722 [Test worker] INFO com.distbuild.worker.WorkerService -- WorkerService test-worker initialized with workspace: worker-workspace-test-worker
+20:25:36.724 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker starting compilation task concurrent-1 for module concurrent-module-1
+20:25:36.724 [ForkJoinPool.commonPool-worker-2] INFO com.distbuild.worker.WorkerService -- Worker test-worker starting compilation task concurrent-2 for module concurrent-module-2
+20:25:36.732 [ForkJoinPool.commonPool-worker-2] DEBUG com.distbuild.worker.WorkerService -- Compiling module concurrent-module-2 with 1 source files
+20:25:36.732 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compiling module concurrent-module-1 with 1 source files
+20:25:36.733 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compilation command: javac -d worker-workspace-test-worker\task-concurrent-1\classes worker-workspace-test-worker\task-concurrent-1\src\src\main\java\Concurrent1.java
+20:25:36.733 [ForkJoinPool.commonPool-worker-2] DEBUG com.distbuild.worker.WorkerService -- Compilation command: javac -d worker-workspace-test-worker\task-concurrent-2\classes worker-workspace-test-worker\task-concurrent-2\src\src\main\java\Concurrent2.java
+20:25:37.277 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Compilation successful for module concurrent-module-1 in 540ms
+20:25:37.277 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker completed task concurrent-1 with success: true
+20:25:37.283 [ForkJoinPool.commonPool-worker-2] INFO com.distbuild.worker.WorkerService -- Compilation successful for module concurrent-module-2 in 550ms
+20:25:37.284 [ForkJoinPool.commonPool-worker-2] INFO com.distbuild.worker.WorkerService -- Worker test-worker completed task concurrent-2 with success: true
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

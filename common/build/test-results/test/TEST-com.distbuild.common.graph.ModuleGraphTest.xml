@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.distbuild.common.graph.ModuleGraphTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-04-21T14:54:12" hostname="POTATO" time="0.01">
+  <properties/>
+  <testcase name="testEmptyGraph" classname="com.distbuild.common.graph.ModuleGraphTest" time="0.003"/>
+  <testcase name="testSingleModule" classname="com.distbuild.common.graph.ModuleGraphTest" time="0.002"/>
+  <testcase name="testCycleDetection" classname="com.distbuild.common.graph.ModuleGraphTest" time="0.0"/>
+  <testcase name="testTopologicalOrder" classname="com.distbuild.common.graph.ModuleGraphTest" time="0.0"/>
+  <testcase name="testAnnotationProcessorFiltering" classname="com.distbuild.common.graph.ModuleGraphTest" time="0.002"/>
+  <testcase name="testSimpleDependencyChain" classname="com.distbuild.common.graph.ModuleGraphTest" time="0.001"/>
+  <testcase name="testParallelBatches" classname="com.distbuild.common.graph.ModuleGraphTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

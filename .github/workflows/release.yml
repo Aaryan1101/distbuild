@@ -1,0 +1,231 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags (v1.0.0, v1.1.0, etc.)
+
+env:
+  DISTBUILD_VERSION: ${{ github.ref_name }}
+  JAVA_VERSION: '17'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+            
+      - name: Build with Gradle
+        run: ./gradlew build -x test
+        
+      - name: Build CLI JAR
+        run: ./gradlew :cli:shadowJar
+        
+      - name: Get version from gradle.properties
+        id: version
+        run: |
+          VERSION=$(grep 'distbuildVersion=' gradle.properties | cut -d'=' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.DISTBUILD_VERSION }}
+          release_name: distbuild ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./cli/build/libs/distbuild.jar
+          asset_name: distbuild-${{ steps.version.outputs.version }}.jar
+          asset_content_type: application/java-archive
+          
+      - name: Calculate SHA256
+        id: sha256
+        run: |
+          SHA256=$(sha256sum ./cli/build/libs/distbuild.jar | awk '{print $1}')
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          
+      - name: Update Scoop Manifest
+        run: |
+          # Clone scoop bucket
+          git clone https://github.com/${{ github.repository_owner }}/scoop-distbuild.git /tmp/scoop-bucket
+          cd /tmp/scoop-bucket
+          
+          # Update manifest
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256="${{ steps.sha256.outputs.sha256 }}"
+          JAR_URL="https://github.com/${{ github.repository_owner }}/releases/download/v${VERSION}/distbuild-${VERSION}.jar"
+          cd /tmp/scoop-bucket
+          
+          # Update manifest
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256="${{ steps.sha256.outputs.sha256 }}"
+          JAR_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/distbuild-${VERSION}.jar"
+          
+          jq --arg v "$VERSION" --arg h "sha256:$SHA256" --arg u "$JAR_URL" \
+            '.version=$v | .architecture["64bit"].url=$u | .architecture["64bit"].hash=$h' \
+            distbuild.json > tmp.json && mv tmp.json distbuild.json
+          
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add distbuild.json
+          git commit -m "Update distbuild to v$VERSION"
+          
+          git push
+          git push
+          
+      - name: Build Debian Package
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Create package structure
+          mkdir -p deb-pkg/DEBIAN
+          mkdir -p deb-pkg/opt/distbuild
+          mkdir -p deb-pkg/usr/local/bin
+          
+          # Copy control file
+          sed "s/Version: .*/Version: $VERSION/" packages/apt/distbuild.control > deb-pkg/DEBIAN/control
+          
+          # Copy JAR
+          cp cli/build/libs/distbuild.jar deb-pkg/opt/distbuild/distbuild.jar
+          
+          # Write launcher
+          cat > deb-pkg/usr/local/bin/distbuild << 'EOF'
+          #!/bin/bash
+          exec java ${DISTBUILD_JVM_OPTS:--Xmx512m} -jar /opt/distbuild/distbuild.jar "$@"
+          EOF
+          chmod +x deb-pkg/usr/local/bin/distbuild
+          
+          # Build .deb
+          dpkg-deb --build deb-pkg distbuild-${VERSION}.deb
+          
+      - name: Update APT Repository
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Clone apt repository
+          git clone --branch gh-pages https://github.com/${{ github.repository_owner }}/distbuild.git apt-repo
+          cd apt-repo
+          
+          # Copy .deb
+          cp ../distbuild-${VERSION}.deb ./
+          
+          # Update package index
+          dpkg-scanpackages --multiversion . > Packages
+          gzip -k -f Packages
+          apt-ftparchive release . > Release
+          
+          # Sign release (you'll need to set up GPG signing)
+          # gpg --default-key you@example.com -abs -o Release.gpg Release
+          # gpg --default-key you@example.com --clearsign -o InRelease Release
+          
+          git add -A
+          git commit -m "apt repo: distbuild v$VERSION"
+          git push
+          
+          # Copy .deb
+          cp ../distbuild-${VERSION}.deb ./
+          
+          # Update package index
+          dpkg-scanpackages --multiversion . > Packages
+          gzip -k -f Packages
+          apt-ftparchive release . > Release
+          
+          # Sign release (you'll need to set up GPG signing)
+          # gpg --default-key you@example.com -abs -o Release.gpg Release
+          # gpg --default-key you@example.com --clearsign -o InRelease Release
+          
+          git add -A
+          git commit -m "apt repo: distbuild v$VERSION"
+          git push
+          
+      - name: Update Winget Manifest
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256="${{ steps.sha256.outputs.sha256 }}"
+          
+          # Clone winget-pkgs
+          git clone https://github.com/microsoft/winget-pkgs.git /tmp/winget-pkgs
+          cd /tmp/winget-pkgs
+          
+          # Create manifest directory
+          MANIFEST_DIR="manifests/y/${{ github.repository_owner }}/distbuild/$VERSION"
+          mkdir -p "$MANIFEST_DIR"
+          
+          # Create manifest
+          cat > "$MANIFEST_DIR/distbuild.yaml" << EOF
+          PackageIdentifier: ${{ github.repository_owner }}.distbuild
+          PackageVersion: $VERSION
+          PackageLocale: en-US
+          Publisher: ${{ github.repository_owner }}
+          PackageName: distbuild
+          License: Apache-2.0
+          ShortDescription: Distributed Java build system
+          Description: Speeds up Gradle builds by distributing compilation across your team's machines.
+          Tags:
+            - java
+            - build
+            - gradle
+            - developer-tools
+          Installers:
+            - Architecture: x64
+              InstallerType: script
+              InstallerUrl: https://raw.githubusercontent.com/${{ github.repository }}/main/installer/install.ps1
+              InstallerSha256: $SHA256
+              InstallerSwitches:
+                Silent: '-NonInteractive'
+          ManifestType: singleton
+          ManifestVersion: 1.4.0
+          EOF
+          
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add "$MANIFEST_DIR"
+          git commit -m "Add ${{ github.repository_owner }}.distbuild version $VERSION"
+          
+          # Note: You'll need to create a PR manually for winget
+          echo "Winget manifest created. Create a PR to microsoft/winget-pkgs to publish."
+          
+      - name: Update installer scripts
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Update version in install.sh
+          sed -i "s/DISTBUILD_VERSION=\".*\"/DISTBUILD_VERSION=\"$VERSION\"/" installer/install.sh
+          
+          # Update version in install.ps1
+          sed -i "s/Version = \".*\"/Version = \"$VERSION\"/" installer/install.ps1
+          
+          git add installer/install.sh installer/install.ps1
+          git commit -m "Update installer scripts to v$VERSION"
+          git push

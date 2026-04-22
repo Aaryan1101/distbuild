@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.distbuild.worker.SimpleWorkerTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-04-21T14:55:32" hostname="POTATO" time="2.341">
+  <properties/>
+  <testcase name="testBasicCompilation" classname="com.distbuild.worker.SimpleWorkerTest" time="2.341"/>
+  <system-out><![CDATA[20:25:32.252 [Test worker] INFO com.distbuild.worker.WorkerService -- WorkerService test-worker initialized with workspace: worker-workspace-test-worker
+20:25:32.356 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker starting compilation task basic-test for module basic-module
+20:25:32.480 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compiling module basic-module with 1 source files
+20:25:32.481 [ForkJoinPool.commonPool-worker-1] DEBUG com.distbuild.worker.WorkerService -- Compilation command: javac -d worker-workspace-test-worker\task-basic-test\classes worker-workspace-test-worker\task-basic-test\src\src\main\java\Simple.java
+20:25:33.964 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Compilation successful for module basic-module in 1471ms
+20:25:34.367 [ForkJoinPool.commonPool-worker-1] INFO com.distbuild.worker.WorkerService -- Worker test-worker completed task basic-test with success: true
+Success: true
+Task ID: basic-test
+Compile time: 1471
+Error message: 
+Compiled files: [src/main/java/Simple.java]
+Class files: [auto/generated/Simple.class]
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

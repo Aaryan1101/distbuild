@@ -1,0 +1,82 @@
+# Worker Specialization Configuration Example
+# This demonstrates how to configure workers with specific capabilities and specializations
+
+coordinator:
+  host: localhost
+  port: 8080
+  management-port: 8081
+  load-balancing: CAPABILITY_BASED
+  discovery-enabled: true
+
+cache:
+  dir: ./distbuild-cache
+  ttl-days: 7
+  max-size-mb: 1024
+
+workers:
+  timeout-seconds: 120
+  max-tasks: 4
+  java-version: "17"
+  
+  # Default capabilities for all workers
+  default-capabilities:
+    os: "Windows"
+    arch: "amd64"
+    native: "true"
+    debug: "true"
+  
+  # Worker specializations for different types of tasks
+  specializations:
+    - name: "native-compilation"
+      pattern: ".*native.*"
+      priority: 10
+      capabilities:
+        native: "true"
+        optimize-for: "windows"
+        cc: "gcc"
+      preferences:
+        memory-boost: "2GB"
+        priority-boost: "high"
+    
+    - name: "test-execution"
+      pattern: ".*test.*"
+      priority: 5
+      capabilities:
+        test-framework: "junit"
+        parallel: "true"
+      preferences:
+        fast-failures: "true"
+        timeout-multiplier: "0.5"
+    
+    - name: "android-build"
+      pattern: ".*android.*"
+      priority: 15
+      capabilities:
+        android-sdk: "true"
+        gradle: "true"
+        ndk: "true"
+      preferences:
+        build-tools: "33.0.0"
+        target-sdk: "33"
+    
+    - name: "spring-boot"
+      pattern: ".*spring.*"
+      priority: 8
+      capabilities:
+        spring: "true"
+        maven: "true"
+        docker: "true"
+      preferences:
+        profile: "prod"
+        lazy-init: "true"
+    
+    - name: "microservices"
+      pattern: ".*service.*|.*api.*"
+      priority: 7
+      capabilities:
+        microservices: "true"
+        container: "true"
+        health-check: "true"
+      preferences:
+        actuator: "true"
+        metrics: "prometheus"

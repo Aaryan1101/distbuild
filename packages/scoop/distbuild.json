@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "description": "Distributed Java build system. Speeds up Gradle builds by distributing compilation tasks across multiple machines on your local network.",
+  "homepage": "https://github.com/Aaryan1101/distbuild",
+  "license": "Apache-2.0",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/Aaryan1101/distbuild/releases/download/v1.0.0/distbuild-1.0.0.jar",
+      "hash": "sha256:PLACEHOLDER_SHA256_HERE"
+    }
+  },
+  "extract_dir": "",
+  "bin": "distbuild.bat",
+  "post_install": [
+    "# Create distbuild.bat launcher",
+    "$dir = $original_dir",
+    "$bin = \"$dir\\distbuild.bat\"",
+    "",
+    "\"@echo off\" | Out-File -FilePath $bin -Encoding ascii",
+    "\"setlocal\" | Out-File -FilePath $bin -Encoding ascii -Append",
+    "\"set DISTBUILD_JVM_OPTS=-Xmx512m\" | Out-File -FilePath $bin -Encoding ascii -Append",
+    "\"java %DISTBUILD_JVM_OPTS% -jar \"$dir\\distbuild.jar\" %*\" | Out-File -FilePath $bin -Encoding ascii -Append",
+    "\"endlocal\" | Out-File -FilePath $bin -Encoding ascii -Append"
+  ],
+  "suggest": {
+    "java": "java/openjdk",
+    "redis": "redis-64"
+  },
+  "checkver": {
+    "github": "Aaryan1101/distbuild",
+    "regex": "v(\\d+\\.\\d+\\.\\d+)"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/Aaryan1101/distbuild/releases/download/v$matchHead/distbuild-$matchHead.jar"
+      }
+    },
+    "hash": {
+      "url": "https://github.com/Aaryan1101/distbuild/releases/download/v$matchHead/distbuild-$matchHead.jar.sha256"
+    }
+  }
+}

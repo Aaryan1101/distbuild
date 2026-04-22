@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.distbuild.common.parser.SimpleGradleParserTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-04-21T14:54:12" hostname="POTATO" time="0.112">
+  <properties/>
+  <testcase name="testSingleModuleProject" classname="com.distbuild.common.parser.SimpleGradleParserTest" time="0.028"/>
+  <testcase name="testModuleWithoutJavaSources" classname="com.distbuild.common.parser.SimpleGradleParserTest" time="0.005"/>
+  <testcase name="testKotlinBuildScript" classname="com.distbuild.common.parser.SimpleGradleParserTest" time="0.014"/>
+  <testcase name="testAnnotationProcessorDetection" classname="com.distbuild.common.parser.SimpleGradleParserTest" time="0.012"/>
+  <testcase name="testEmptyProject" classname="com.distbuild.common.parser.SimpleGradleParserTest" time="0.002"/>
+  <testcase name="testDependencyResolution" classname="com.distbuild.common.parser.SimpleGradleParserTest" time="0.033"/>
+  <testcase name="testMultiModuleProject" classname="com.distbuild.common.parser.SimpleGradleParserTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

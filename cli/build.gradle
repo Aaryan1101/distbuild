@@ -1,0 +1,56 @@
+plugins {
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':common')
+    implementation project(':coordinator')
+    implementation project(':worker')
+    
+    // CLI framework
+    implementation 'info.picocli:picocli:4.7.5'
+    annotationProcessor 'info.picocli:picocli-codegen:4.7.5'
+    
+    // YAML configuration
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2'
+    
+    // HTTP client for status commands
+    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
+    
+    // Logging
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    implementation 'ch.qos.logback:logback-classic:1.4.8'
+}
+
+application {
+    mainClass = 'com.distbuild.cli.DistBuildCli'
+}
+
+tasks.shadowJar {
+    archiveBaseName.set('distbuild')
+    archiveClassifier.set('')
+    archiveVersion.set('')
+    mergeServiceFiles()
+}
+
+// Generate completion scripts
+task generateCompletion(type: JavaExec) {
+    group = 'build'
+    description = 'Generate shell completion scripts'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.distbuild.cli.DistBuildCli'
+    args = ['generate-completion', 'bash', 'build/completion/bash']
+    
+    doFirst {
+        file('build/completion').mkdirs()
+    }
+}
+
+// Build fat JAR with: ./gradlew :cli:shadowJar
+// Output: cli/build/libs/distbuild.jar

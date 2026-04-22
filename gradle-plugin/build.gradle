@@ -1,0 +1,42 @@
+plugins {
+    id 'java-gradle-plugin'
+    id 'groovy'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':common')
+    
+    // Gradle API
+    implementation gradleApi()
+    
+    // Guava - use standard version to avoid Android version conflicts
+    implementation 'com.google.guava:guava:31.1-jre'
+    
+    // Logging
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    implementation 'ch.qos.logback:logback-classic:1.4.8'
+    
+    // Testing
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:5.4.0'
+}
+
+gradlePlugin {
+    plugins {
+        distBuildPlugin {
+            id = 'com.distbuild.gradle'
+            implementationClass = 'com.distbuild.gradle.DistBuildPlugin'
+        }
+    }
+}
+
+test {
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.distbuild.common.cache.InputHasherTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-04-21T14:54:09" hostname="POTATO" time="0.095">
+  <properties/>
+  <testcase name="testDifferentJavaVersionProducesDifferentHash" classname="com.distbuild.common.cache.InputHasherTest" time="0.022"/>
+  <testcase name="testJarHashComputation" classname="com.distbuild.common.cache.InputHasherTest" time="0.006"/>
+  <testcase name="testIncrementalStateAffectsHash" classname="com.distbuild.common.cache.InputHasherTest" time="0.006"/>
+  <testcase name="testDifferentSourceFilesProduceDifferentHashes" classname="com.distbuild.common.cache.InputHasherTest" time="0.014"/>
+  <testcase name="testSameInputsProduceSameHash" classname="com.distbuild.common.cache.InputHasherTest" time="0.008"/>
+  <testcase name="testCompilerOptionsAffectHash" classname="com.distbuild.common.cache.InputHasherTest" time="0.012"/>
+  <testcase name="testMultipleJarHashes" classname="com.distbuild.common.cache.InputHasherTest" time="0.01"/>
+  <testcase name="testMissingJarFileThrowsException" classname="com.distbuild.common.cache.InputHasherTest" time="0.002"/>
+  <testcase name="testJarHashesAffectHash" classname="com.distbuild.common.cache.InputHasherTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

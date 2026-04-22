@@ -1,0 +1,62 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.google.protobuf' version '0.9.4'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':common')
+    
+    // gRPC
+    implementation 'io.grpc:grpc-netty:1.58.0'
+    implementation 'io.grpc:grpc-protobuf:1.58.0'
+    implementation 'io.grpc:grpc-stub:1.58.0'
+    
+    // Annotation
+    implementation 'javax.annotation:javax.annotation-api:1.3.2'
+    
+    // Redis
+    implementation 'redis.clients:jedis:5.0.0'
+    
+    // Logging
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    implementation 'ch.qos.logback:logback-classic:1.4.8'
+    
+    // Guava
+    implementation 'com.google.guava:guava:32.1.2-jre'
+    
+    // Testing
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:5.4.0'
+}
+
+application {
+    mainClass = 'com.distbuild.coordinator.DiscoveryCoordinatorMain'
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.24.0"
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.58.0'
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
+
+test {
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}

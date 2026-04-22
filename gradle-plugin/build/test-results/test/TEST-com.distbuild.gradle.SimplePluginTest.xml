@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.distbuild.gradle.SimplePluginTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-04-21T14:54:40" hostname="POTATO" time="2.706">
+  <properties/>
+  <testcase name="testPluginCanBeApplied" classname="com.distbuild.gradle.SimplePluginTest" time="2.449"/>
+  <testcase name="testPluginCompiles" classname="com.distbuild.gradle.SimplePluginTest" time="0.257"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

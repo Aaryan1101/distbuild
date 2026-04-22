@@ -1,0 +1,102 @@
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'application'
+    id 'com.google.protobuf' version '0.9.4'
+    id 'signing'
+    id 'maven-publish'
+}
+
+group = 'com.distbuild'
+version = '0.1.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // gRPC
+    implementation 'io.grpc:grpc-netty:1.58.0'
+    implementation 'io.grpc:grpc-protobuf:1.58.0'
+    implementation 'io.grpc:grpc-stub:1.58.0'
+    implementation 'com.google.protobuf:protobuf-java:3.24.0'
+    
+    // Redis
+    implementation 'redis.clients:jedis:5.0.0'
+    
+    // JSON processing
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
+    
+    // Logging
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    implementation 'ch.qos.logback:logback-classic:1.4.8'
+    
+    // Guava for utilities
+    implementation 'com.google.guava:guava:32.1.2-jre'
+    
+    // Digest for hashing
+    implementation 'commons-codec:commons-codec:1.16.0'
+    
+    // Testing
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:5.4.0'
+    testImplementation 'org.testcontainers:testcontainers:1.18.3'
+    testImplementation 'org.testcontainers:junit:1.18.3'
+    testImplementation 'org.testcontainers:redis:1.18.3'
+    
+    // Gradle API for plugin development
+    implementation 'org.gradle:gradle-tooling-api:8.3'
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.24.0"
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.58.0'
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
+
+// Task to build all modules
+task buildAll {
+    dependsOn ':common:build', ':coordinator:build', ':worker:build', ':gradle-plugin:build'
+}
+
+// Task to run all tests
+task testAll {
+    dependsOn ':common:test', ':coordinator:test', ':worker:test', ':gradle-plugin:test'
+}
+
+// Task to start coordinator
+task startCoordinator(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.distbuild.coordinator.CoordinatorMain'
+    args = ['--port', '8080', '--redis', 'localhost:6379']
+}
+
+// Task to start worker
+task startWorker(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.distbuild.worker.WorkerMain'
+    args = ['--coordinator', 'localhost:8080', '--port', '8081']
+}
+
+test {
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}

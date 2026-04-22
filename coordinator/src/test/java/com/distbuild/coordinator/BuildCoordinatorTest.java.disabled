@@ -1,0 +1,254 @@
+package com.distbuild.coordinator;
+
+import com.distbuild.common.cache.BuildCache;
+import com.distbuild.common.cache.CompileResult;
+import com.distbuild.common.graph.ModuleGraph;
+import com.distbuild.common.model.ModuleInfo;
+import com.distbuild.common.grpc.BuildProto;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+public class BuildCoordinatorTest {
+
+    @Mock
+    private BuildCache mockCache;
+    
+    @Mock
+    private WorkerManager mockWorkerManager;
+    
+    private BuildCoordinator coordinator;
+
+    @Before
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
+        coordinator = new BuildCoordinator(mockCache, mockWorkerManager);
+    }
+
+    @Test
+    public void testEmptyGraphBuild() throws Exception {
+        ModuleGraph emptyGraph = new ModuleGraph();
+        
+        CompletableFuture<Map<String, CompileResult>> future = coordinator.build(emptyGraph);
+        Map<String, CompileResult> results = future.get();
+        
+        assertTrue(results.isEmpty());
+        verify(mockCache, never()).get(anyString());
+        verify(mockWorkerManager, never()).getAvailableWorker();
+    }
+
+    @Test
+    public void testSingleModuleBuild() throws Exception {
+        // Create a simple module
+        ModuleInfo module = ModuleInfo.builder()
+                .name("test-module")
+                .projectPath(Paths.get("test-module"))
+                .outputDirectory(Paths.get("test-module/build/classes"))
+                .addSourceFile("src/main/java/Test.java")
+                .javaVersion("17")
+                .build();
+        
+        ModuleGraph graph = new ModuleGraph();
+        graph.addModule(module);
+        
+        // Mock cache miss
+        when(mockCache.get(anyString())).thenReturn(Optional.empty());
+        
+        // Mock no available workers
+        when(mockWorkerManager.getAvailableWorker()).thenReturn(null);
+        
+        CompletableFuture<Map<String, CompileResult>> future = coordinator.build(graph);
+        Map<String, CompileResult> results = future.get();
+        
+        assertEquals(1, results.size());
+        CompileResult result = results.get("test-module");
+        assertNotNull(result);
+        assertTrue(result.isSuccess());
+        
+        verify(mockCache).get(anyString());
+        verify(mockWorkerManager).getAvailableWorker();
+    }
+
+    @Test
+    public void testCacheHit() throws Exception {
+        // Create a module
+        ModuleInfo module = ModuleInfo.builder()
+                .name("test-module")
+                .projectPath(Paths.get("test-module"))
+                .outputDirectory(Paths.get("test-module/build/classes"))
+                .addSourceFile("src/main/java/Test.java")
+                .javaVersion("17")
+                .build();
+        
+        ModuleGraph graph = new ModuleGraph();
+        graph.addModule(module);
+        
+        // Create cached result
+        CompileResult cachedResult = CompileResult.success(
+            Set.of("src/main/java/Test.java"),
+            Set.of("build/classes/Test.class"),
+            Map.of("build/classes/Test.class", "compiled".getBytes()),
+            500
+        );
+        
+        // Mock cache hit
+        when(mockCache.get(anyString())).thenReturn(Optional.of(cachedResult));
+        
+        CompletableFuture<Map<String, CompileResult>> future = coordinator.build(graph);
+        Map<String, CompileResult> results = future.get();
+        
+        assertEquals(1, results.size());
+        CompileResult result = results.get("test-module");
+        assertNotNull(result);
+        assertTrue(result.isSuccess());
+        assertEquals(500, result.getCompileTimeMs());
+        
+        verify(mockCache).get(anyString());
+        verify(mockWorkerManager, never()).getAvailableWorker();
+    }
+
+    @Test
+    public void testDependencyOrdering() throws Exception {
+        // Create modules with dependencies: A -> B -> C
+        ModuleInfo moduleA = ModuleInfo.builder()
+                .name("module-a")
+                .projectPath(Paths.get("module-a"))
+                .outputDirectory(Paths.get("module-a/build/classes"))
+                .addSourceFile("src/main/java/A.java")
+                .javaVersion("17")
+                .build();
+        
+        ModuleInfo moduleB = ModuleInfo.builder()
+                .name("module-b")
+                .projectPath(Paths.get("module-b"))
+                .outputDirectory(Paths.get("module-b/build/classes"))
+                .addSourceFile("src/main/java/B.java")
+                .addDependency("module-a")
+                .javaVersion("17")
+                .build();
+        
+        ModuleInfo moduleC = ModuleInfo.builder()
+                .name("module-c")
+                .projectPath(Paths.get("module-c"))
+                .outputDirectory(Paths.get("module-c/build/classes"))
+                .addSourceFile("src/main/java/C.java")
+                .addDependency("module-b")
+                .javaVersion("17")
+                .build();
+        
+        ModuleGraph graph = new ModuleGraph();
+        graph.addModule(moduleA);
+        graph.addModule(moduleB);
+        graph.addModule(moduleC);
+        
+        // Mock cache misses
+        when(mockCache.get(anyString())).thenReturn(Optional.empty());
+        
+        // Mock no available workers
+        when(mockWorkerManager.getAvailableWorker()).thenReturn(null);
+        
+        CompletableFuture<Map<String, CompileResult>> future = coordinator.build(graph);
+        Map<String, CompileResult> results = future.get();
+        
+        assertEquals(3, results.size());
+        assertTrue(results.containsKey("module-a"));
+        assertTrue(results.containsKey("module-b"));
+        assertTrue(results.containsKey("module-c"));
+        
+        // All should succeed (local compilation fallback)
+        results.values().forEach(result -> assertTrue(result.isSuccess()));
+        
+        // Verify cache was checked for each module
+        verify(mockCache, times(3)).get(anyString());
+    }
+
+    @Test
+    public void testParallelCompilation() throws Exception {
+        // Create independent modules that can compile in parallel
+        List<ModuleInfo> modules = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            ModuleInfo module = ModuleInfo.builder()
+                    .name("module-" + i)
+                    .projectPath(Paths.get("module-" + i))
+                    .outputDirectory(Paths.get("module-" + i + "/build/classes"))
+                    .addSourceFile("src/main/java/Module" + i + ".java")
+                    .javaVersion("17")
+                    .build();
+            modules.add(module);
+        }
+        
+        ModuleGraph graph = new ModuleGraph();
+        modules.forEach(graph::addModule);
+        
+        // Mock cache misses
+        when(mockCache.get(anyString())).thenReturn(Optional.empty());
+        
+        // Mock no available workers
+        when(mockWorkerManager.getAvailableWorker()).thenReturn(null);
+        
+        long startTime = System.currentTimeMillis();
+        CompletableFuture<Map<String, CompileResult>> future = coordinator.build(graph);
+        Map<String, CompileResult> results = future.get();
+        long endTime = System.currentTimeMillis();
+        
+        assertEquals(3, results.size());
+        
+        // Should complete in roughly the time of one compilation (parallel execution)
+        // Allow some tolerance for scheduling overhead
+        assertTrue("Parallel compilation should be faster", (endTime - startTime) < 2500);
+        
+        // All should succeed
+        results.values().forEach(result -> assertTrue(result.isSuccess()));
+    }
+
+    @Test
+    public void testAnnotationProcessorFallback() throws Exception {
+        // Create module with annotation processors
+        ModuleInfo moduleWithAP = ModuleInfo.builder()
+                .name("module-with-ap")
+                .projectPath(Paths.get("module-with-ap"))
+                .outputDirectory(Paths.get("module-with-ap/build/classes"))
+                .addSourceFile("src/main/java/Entity.java")
+                .hasAnnotationProcessors(true)
+                .javaVersion("17")
+                .build();
+        
+        ModuleInfo normalModule = ModuleInfo.builder()
+                .name("normal-module")
+                .projectPath(Paths.get("normal-module"))
+                .outputDirectory(Paths.get("normal-module/build/classes"))
+                .addSourceFile("src/main/java/Normal.java")
+                .javaVersion("17")
+                .build();
+        
+        ModuleGraph graph = new ModuleGraph();
+        graph.addModule(moduleWithAP);
+        graph.addModule(normalModule);
+        
+        // Mock cache misses
+        when(mockCache.get(anyString())).thenReturn(Optional.empty());
+        
+        // Mock no available workers
+        when(mockWorkerManager.getAvailableWorker()).thenReturn(null);
+        
+        CompletableFuture<Map<String, CompileResult>> future = coordinator.build(graph);
+        Map<String, CompileResult> results = future.get();
+        
+        assertEquals(1, results.size()); // Only normal module should be compiled
+        assertTrue(results.containsKey("normal-module"));
+        assertFalse(results.containsKey("module-with-ap"));
+        
+        // The module with annotation processors should be filtered out
+        verify(mockCache, times(1)).get(anyString());
+    }
+}

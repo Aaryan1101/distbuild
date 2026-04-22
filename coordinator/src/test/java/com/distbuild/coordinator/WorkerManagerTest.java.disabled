@@ -1,0 +1,172 @@
+package com.distbuild.coordinator;
+
+import com.distbuild.common.grpc.BuildProto;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.Collection;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.*;
+
+public class WorkerManagerTest {
+
+    private WorkerManager workerManager;
+
+    @Before
+    public void setUp() {
+        workerManager = new WorkerManager();
+    }
+
+    @Test
+    public void testInitialState() {
+        Collection<WorkerManager.WorkerInfo> workers = workerManager.getAllWorkers();
+        assertTrue(workers.isEmpty());
+        
+        WorkerManager.WorkerStats stats = workerManager.getStats();
+        assertEquals(0, stats.getTotalWorkers());
+        assertEquals(0, stats.getAvailableWorkers());
+        assertEquals(0, stats.getBusyWorkers());
+        assertEquals(0, stats.getOfflineWorkers());
+        assertEquals(0, stats.getTotalActiveTasks());
+    }
+
+    @Test
+    public void testGetAvailableWorkerEmpty() {
+        WorkerManager.WorkerInfo worker = workerManager.getAvailableWorker();
+        assertNull(worker);
+    }
+
+    @Test
+    public void testRegisterWorkerSuccess() {
+        BuildProto.RegisterWorkerRequest request = BuildProto.RegisterWorkerRequest.newBuilder()
+                .setWorkerId("worker-1")
+                .setHost("localhost")
+                .setPort(8081)
+                .setMaxConcurrentTasks(4)
+                .setJavaVersion("17")
+                .putCapabilities("java", "true")
+                .build();
+
+        // This will fail in test because there's no actual gRPC server
+        // but we can test the basic structure
+        boolean result = workerManager.registerWorker(request);
+        assertFalse(result); // Expected to fail without actual server
+    }
+
+    @Test
+    public void testHandleHeartbeatUnknownWorker() {
+        BuildProto.HeartbeatRequest heartbeat = BuildProto.HeartbeatRequest.newBuilder()
+                .setWorkerId("unknown-worker")
+                .setActiveTasks(0)
+                .setTimestamp(System.currentTimeMillis())
+                .setStatus(BuildProto.WorkerStatus.WORKER_STATUS_AVAILABLE)
+                .build();
+
+        // Should not throw exception for unknown worker
+        workerManager.handleHeartbeat(heartbeat);
+        
+        // Stats should still be empty
+        WorkerManager.WorkerStats stats = workerManager.getStats();
+        assertEquals(0, stats.getTotalWorkers());
+    }
+
+    @Test
+    public void testWorkerStats() {
+        WorkerManager.WorkerStats stats = workerManager.getStats();
+        
+        assertNotNull(stats);
+        assertEquals(0, stats.getTotalWorkers());
+        assertEquals(0, stats.getAvailableWorkers());
+        assertEquals(0, stats.getBusyWorkers());
+        assertEquals(0, stats.getOfflineWorkers());
+        assertEquals(0, stats.getTotalActiveTasks());
+        
+        assertEquals("WorkerStats{total=0, available=0, busy=0, offline=0, activeTasks=0}", stats.toString());
+    }
+
+    @Test
+    public void testWorkerInfo() {
+        WorkerManager.WorkerInfo worker = new WorkerManager.WorkerInfo(
+                "test-worker",
+                "localhost",
+                8081,
+                4,
+                "17",
+                Map.of("java", "true", "maven", "true")
+        );
+
+        assertEquals("test-worker", worker.getId());
+        assertEquals("localhost", worker.getHost());
+        assertEquals(8081, worker.getPort());
+        assertEquals(4, worker.getMaxConcurrentTasks());
+        assertEquals("17", worker.getJavaVersion());
+        assertEquals(Map.of("java", "true", "maven", "true"), worker.getCapabilities());
+        
+        // Test initial state
+        assertEquals(WorkerManager.WorkerStatus.OFFLINE, worker.getStatus());
+        assertEquals(0, worker.getActiveTasks());
+        assertEquals(0, worker.getLastHeartbeat());
+        assertEquals(0, worker.getTotalTasksCompleted());
+        assertEquals(0, worker.getTotalCompileTime());
+        
+        // Test status changes
+        worker.setStatus(WorkerManager.WorkerStatus.AVAILABLE);
+        assertEquals(WorkerManager.WorkerStatus.AVAILABLE, worker.getStatus());
+        
+        // Test task counting
+        worker.incrementActiveTasks();
+        assertEquals(1, worker.getActiveTasks());
+        
+        worker.decrementActiveTasks();
+        assertEquals(0, worker.getActiveTasks());
+        
+        // Test task completion recording
+        worker.recordTaskCompletion(1000);
+        assertEquals(1, worker.getTotalTasksCompleted());
+        assertEquals(1000, worker.getTotalCompileTime());
+        
+        // Test string representation
+        String workerString = worker.toString();
+        assertTrue(workerString.contains("test-worker"));
+        assertTrue(workerString.contains("localhost:8081"));
+        assertTrue(workerString.contains("AVAILABLE"));
+        assertTrue(workerString.contains("0/4"));
+    }
+
+    @Test
+    public void testTaskExecutionWithoutWorkers() {
+        BuildProto.CompileTaskRequest request = BuildProto.CompileTaskRequest.newBuilder()
+                .setTaskId("test-task")
+                .setModuleName("test-module")
+                .addSourceFiles("src/main/java/Test.java")
+                .setJavaVersion("17")
+                .build();
+
+        CompletableFuture<BuildProto.CompileTaskResponse> future = new CompletableFuture<>();
+        
+        // Should complete exceptionally when no workers are available
+        workerManager.executeTask("non-existent-worker", request, future);
+        
+        try {
+            future.get(1, TimeUnit.SECONDS);
+            fail("Expected exception");
+        } catch (Exception e) {
+            assertTrue(e.getCause() instanceof IllegalArgumentException);
+            assertTrue(e.getCause().getMessage().contains("Worker not found"));
+        }
+    }
+
+    @Test
+    public void testMarkWorkerUnavailable() {
+        // Should not throw exception for non-existent worker
+        workerManager.markWorkerUnavailable("non-existent-worker");
+    }
+
+    @Test
+    public void testShutdown() {
+        // Should not throw exception
+        workerManager.shutdown();
+    }
+}

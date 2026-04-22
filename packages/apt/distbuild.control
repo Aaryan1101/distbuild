@@ -1,0 +1,18 @@
+Package: distbuild
+Version: 1.0.0
+Section: devel
+Priority: optional
+Architecture: all
+Depends: default-jre-headless (>= 2:1.17)
+Recommends: redis-server
+Maintainer: Aaryan <aryanxp0909@gmail.com>
+Homepage: https://github.com/Aaryan1101/distbuild
+Description: Distributed Java build system
+ Speeds up Gradle builds by distributing compilation
+ tasks across multiple machines on your local network.
+ .
+ This package includes the distbuild command-line tool and
+ all necessary dependencies for distributed Java compilation.
+ .
+ The Depends: field means apt automatically installs Java
+ if missing. Redis is Recommends - apt will suggest it but not require it.
