@@ -12,12 +12,7 @@ A distributed build system for Java projects that enables parallel compilation a
 
 ## Quick Start
 
-### One-Liner Installation (Windows PowerShell)
-```powershell
-irm https://raw.githubusercontent.com/Aaryan1101/distbuild/main/installer/install.ps1 | iex
-```
-
-### Scoop Installation (Windows)
+### Scoop Installation (Windows) - Recommended
 
 **First, install Scoop (if not already installed):**
 ```powershell
@@ -30,9 +25,18 @@ scoop bucket add distbuild https://github.com/Aaryan1101/scoop-distbuild
 scoop install distbuild
 ```
 
-### Manual Installation
-1. Download the latest JAR from [Releases](https://github.com/Aaryan1101/distbuild/releases)
-2. Run: `java -jar distbuild-1.1.4.jar`
+### Manual Installation - Always Works
+
+**Download and run directly:**
+```powershell
+# Download JAR
+Invoke-WebRequest -Uri 'https://github.com/Aaryan1101/distbuild/releases/download/v1.1.4/distbuild-1.1.4.jar' -OutFile 'distbuild.jar'
+
+# Run it
+java -jar distbuild.jar --help
+```
+
+**Or download from:** [Releases](https://github.com/Aaryan1101/distbuild/releases)
 
 ## Setup and Usage
 
