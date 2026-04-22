@@ -2,7 +2,7 @@
 # Usage: irm https://raw.githubusercontent.com/Aaryan1101/distbuild/main/installer/install.ps1 | iex
 
 param(
-    [string]$Version = "1.0.0",
+    [string]$Version = "1.1.4",
     [string]$InstallDir = "C:\distbuild",
     [switch]$Force
 )
