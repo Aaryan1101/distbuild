@@ -27,7 +27,22 @@ scoop install distbuild
 1. Download the latest JAR from [Releases](https://github.com/Aaryan1101/distbuild/releases)
 2. Run: `java -jar distbuild-1.1.4.jar`
 
-## Usage
+## Setup and Usage
+
+### First Time Setup
+```bash
+# 1. Check system requirements
+distbuild doctor
+
+# 2. Start the coordinator (in terminal 1)
+distbuild coordinator start
+
+# 3. Start a worker (in terminal 2)
+distbuild worker start
+
+# 4. Check status
+distbuild status
+```
 
 ### Basic Commands
 ```bash
@@ -37,11 +52,51 @@ distbuild build
 # List available workers
 distbuild list-workers
 
-# Add a worker
+# Add a worker manually
 distbuild add-worker <worker-ip>
 
-# Check status
-distbuild status
+# Check system health
+distbuild doctor
+
+# View logs
+distbuild logs
+```
+
+### Troubleshooting
+If `distbuild doctor` shows issues:
+
+1. **"Cannot connect to coordinator"** - Start the coordinator:
+   ```bash
+   distbuild coordinator start
+   ```
+
+2. **"Cache directory does not exist"** - Create directories:
+   ```bash
+   mkdir distbuild-cache
+   mkdir logs
+   ```
+
+3. **"Java version incompatible"** - Install Java 17+:
+   ```powershell
+   # Windows
+   winget install Oracle.JavaRuntimeEnvironment
+   # or download from https://adoptium.net/
+   ```
+
+### Advanced Usage
+```bash
+# Interactive setup
+distbuild init
+
+# Configure settings
+distbuild config set coordinator.port 8080
+distbuild config set worker.memory 2048
+
+# Clear cache
+distbuild cache clear
+
+# Generate shell completion
+distbuild generate-completion
 ```
 
 ### Gradle Plugin
