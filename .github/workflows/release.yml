@@ -99,8 +99,8 @@ jobs:
             '.version=$v | .architecture["64bit"].url=$u | .architecture["64bit"].hash=$h' \
             distbuild.json > tmp.json && mv tmp.json distbuild.json
           
-          git config user.name "github-actions"
-          git config user.email "github-actions@users.noreply.github.com"
+          git config user.name "Aaryan1101"
+          git config user.email "aryanxp0909@gmail.com"
           git add distbuild.json
           git commit -m "Update distbuild to v$VERSION"
           
@@ -210,8 +210,8 @@ jobs:
           ManifestVersion: 1.4.0
           EOF
           
-          git config user.name "github-actions"
-          git config user.email "github-actions@users.noreply.github.com"
+          git config user.name "Aaryan1101"
+          git config user.email "aryanxp0909@gmail.com"
           git add "$MANIFEST_DIR"
           git commit -m "Add ${{ github.repository_owner }}.distbuild version $VERSION"
           
