@@ -81,7 +81,7 @@ jobs:
       - name: Update Scoop Manifest
         run: |
           # Clone scoop bucket
-          git clone https://Aaryan1101:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository_owner }}/scoop-distbuild.git /tmp/scoop-bucket
+          git clone https://Aaryan1101:${{ secrets.SCOOP_TOKEN }}@github.com/${{ github.repository_owner }}/scoop-distbuild.git /tmp/scoop-bucket
           cd /tmp/scoop-bucket
           
           # Update manifest
