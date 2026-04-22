@@ -4,7 +4,7 @@ set -euo pipefail
 # distbuild installer for Linux/macOS
 # Usage: curl -fsSL https://raw.githubusercontent.com/Aaryan1101/distbuild/main/installer/install.sh | bash
 
-DISTBUILD_VERSION="${DISTBUILD_VERSION:-1.0.0}"
+DISTBUILD_VERSION="1.1.4"
 INSTALL_DIR="${INSTALL_DIR:-/opt/distbuild}"
 SERVICE_USER="${SERVICE_USER:-$USER}"
 
