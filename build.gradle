@@ -51,7 +51,7 @@ dependencies {
     testImplementation 'org.testcontainers:redis:1.18.3'
     
     // Gradle API for plugin development
-    implementation 'org.gradle:gradle-tooling-api:8.3'
+    // implementation 'org.gradle:gradle-tooling-api:8.1'  # Removed for compatibility
 }
 
 protobuf {
