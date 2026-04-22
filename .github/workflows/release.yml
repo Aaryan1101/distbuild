@@ -236,4 +236,4 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git add installer/install.sh installer/install.ps1
           git commit -m "Update installer scripts to v$VERSION"
-          git push
+          git push origin HEAD:main
