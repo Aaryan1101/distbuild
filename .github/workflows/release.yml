@@ -81,7 +81,7 @@ jobs:
       - name: Update Scoop Manifest
         run: |
           # Clone scoop bucket
-          git clone https://github.com/${{ github.repository_owner }}/scoop-distbuild.git /tmp/scoop-bucket
+          git clone https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository_owner }}/scoop-distbuild.git /tmp/scoop-bucket
           cd /tmp/scoop-bucket
           
           # Update manifest
@@ -104,8 +104,7 @@ jobs:
           git add distbuild.json
           git commit -m "Update distbuild to v$VERSION"
           
-          git push
-          git push
+          git push origin main
           
       - name: Build Debian Package
         run: |
@@ -137,7 +136,7 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           
           # Clone apt repository
-          git clone --branch gh-pages https://github.com/${{ github.repository_owner }}/distbuild.git apt-repo
+          git clone --branch gh-pages https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository_owner }}/distbuild.git apt-repo
           cd apt-repo
           
           # Copy .deb
